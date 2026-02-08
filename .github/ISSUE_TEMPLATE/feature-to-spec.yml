@@ -42,12 +42,12 @@ body:
       label: Extra Instructions
       description: Specific prompt engineering for the agent. This will be posted as a comment to guide the bot.
       value: |
-        1. Review .github/instructions/spec.instructions.md for more details and use this as your guide for the feature specification.
-        2. Ensure you review all other repository instructions before starting work to understand engineering requirements.
-        3. Create your final spec output in the .github/specs directory and ensure requirements are captured in the EARS format.
+        1. Review .github/instructions/spec.instructions.md for details and use this as your guide for the spec.
+        2. Review all other repository instructions before starting work to understand engineering requirements.
+        3. Create the spec in .github/specs directory and ensure requirements are captured in the EARS format.
         4. Create a data flow diagram and sequence diagram to illustrate the feature's operation.
         5. Break down the feature into manageable tasks with clear descriptions.
-        6. As you complete each task in the spec, mark the checkboxes as complete in the spec file using [x] notation.
+        6. As you complete each task in the spec, mark the checkboxes as complete using [x] notation.
         7. If you need to make assumptions, ask questions on the issue.
         8. Use the diagrams to inform your implementation plan.
     validations:
