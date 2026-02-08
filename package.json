@@ -1,66 +1,66 @@
 {
-  "name": "lousy-iam",
-  "version": "1.0.0",
-  "description": "Analyze and generate least-privilege AWS IAM policies from CDK applications",
-  "keywords": [
-    "aws",
-    "iam",
-    "cli",
-    "least",
-    "privilege",
-    "cdk"
-  ],
-  "homepage": "https://github.com/zpratt/lousy-iam#readme",
-  "bugs": {
-    "url": "https://github.com/zpratt/lousy-iam/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/zpratt/lousy-iam.git"
-  },
-  "license": "MIT",
-  "author": "Zach Pratt",
-  "type": "module",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      }
+    "name": "lousy-iam",
+    "version": "1.0.0",
+    "description": "Analyze and generate least-privilege AWS IAM policies from CDK applications",
+    "keywords": [
+        "aws",
+        "iam",
+        "cli",
+        "least",
+        "privilege",
+        "cdk"
+    ],
+    "homepage": "https://github.com/zpratt/lousy-iam#readme",
+    "bugs": {
+        "url": "https://github.com/zpratt/lousy-iam/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/zpratt/lousy-iam.git"
+    },
+    "license": "MIT",
+    "author": "Zach Pratt",
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            }
+        }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "bin": {
+        "lousy-iam": "./dist/index.js"
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsx watch src/index.ts",
+        "lint": "biome check .",
+        "lint:fix": "biome check --write .",
+        "lint:workflows": "actionlint",
+        "lint:yaml": "yamllint .",
+        "start": "node dist/index.js",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "citty": "0.2.0",
+        "consola": "3.4.2",
+        "zod": "3.25.56"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.3.14",
+        "@types/node": "22.16.4",
+        "chance": "1.1.12",
+        "tsx": "4.20.3",
+        "typescript": "5.8.3",
+        "vitest": "4.0.15"
+    },
+    "engines": {
+        "node": ">=22.0.0"
     }
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "lousy-iam": "./dist/index.js"
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsx watch src/index.ts",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
-    "lint:workflows": "actionlint",
-    "lint:yaml": "yamllint .",
-    "start": "node dist/index.js",
-    "test": "vitest run"
-  },
-  "dependencies": {
-    "citty": "0.2.0",
-    "consola": "3.4.2",
-    "zod": "3.25.56"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.3.8",
-    "@types/node": "22.16.4",
-    "chance": "1.1.12",
-    "tsx": "4.20.3",
-    "typescript": "5.8.3",
-    "vitest": "4.0.15"
-  },
-  "engines": {
-    "node": ">=22.0.0"
-  }
 }
