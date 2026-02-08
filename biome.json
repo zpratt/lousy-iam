@@ -26,7 +26,21 @@
                 "useConsistentBuiltinInstantiation": "error",
                 "useConsistentCurlyBraces": "error",
                 "useFilenamingConvention": "error",
-                "useNamingConvention": "error"
+                "useNamingConvention": {
+                    "level": "error",
+                    "options": {
+                        "conventions": [
+                            {
+                                "selector": { "kind": "objectLiteralProperty" },
+                                "formats": [
+                                    "camelCase",
+                                    "PascalCase",
+                                    "snake_case"
+                                ]
+                            }
+                        ]
+                    }
+                }
             },
             "performance": {
                 "noNamespaceImport": "error",
