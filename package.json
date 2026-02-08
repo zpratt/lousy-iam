@@ -1,0 +1,50 @@
+{
+  "name": "lousy-iam",
+  "version": "1.0.0",
+  "description": "Analyze and generate least-privilege AWS IAM policies from CDK applications",
+  "keywords": [
+    "aws",
+    "iam",
+    "cli",
+    "least",
+    "privilege",
+    "cdk"
+  ],
+  "homepage": "https://github.com/zpratt/lousy-iam#readme",
+  "bugs": {
+    "url": "https://github.com/zpratt/lousy-iam/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zpratt/lousy-iam.git"
+  },
+  "license": "MIT",
+  "author": "Zach Pratt",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "lousy-iam": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint:workflows": "actionlint",
+    "lint:yaml": "yamllint .",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
