@@ -1,4 +1,5 @@
-import type { PlanAction, TerraformPlan } from "../entities/terraform-plan.js";
+import type { PlanAction } from "../entities/terraform-plan.js";
+import { TerraformPlanSchema } from "../entities/terraform-plan.js";
 
 const AWS_PROVIDER = "registry.terraform.io/hashicorp/aws";
 
@@ -48,6 +49,7 @@ export function buildPlanObject(
         readonly formatVersion?: string;
         readonly terraformVersion?: string;
     },
-): TerraformPlan {
-    return JSON.parse(buildPlanJson(resources, options)) as TerraformPlan;
+) {
+    const raw: unknown = JSON.parse(buildPlanJson(resources, options));
+    return TerraformPlanSchema.parse(raw);
 }

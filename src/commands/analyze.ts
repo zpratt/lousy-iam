@@ -3,14 +3,21 @@ import type {
     ActionInventory,
     InfrastructureActionEntry,
 } from "../entities/action-inventory.js";
-import { createActionMappingDb } from "../gateways/action-mapping-db.js";
-import { createActionInventoryBuilder } from "../use-cases/build-action-inventory.js";
-import { createResourceActionMapper } from "../use-cases/map-resource-actions.js";
-import { createTerraformPlanParser } from "../use-cases/parse-terraform-plan.js";
+import type { ActionInventoryBuilder } from "../use-cases/build-action-inventory.js";
+import type { ResourceActionMapper } from "../use-cases/map-resource-actions.js";
+import type { TerraformPlanParser } from "../use-cases/parse-terraform-plan.js";
+import type { ActionInventorySerializer } from "../use-cases/serialize-action-inventory.js";
 
 export interface ConsoleOutput {
     log(message: string): void;
     warn(message: string): void;
+}
+
+export interface AnalyzeCommandDeps {
+    readonly parser: TerraformPlanParser;
+    readonly mapper: ResourceActionMapper;
+    readonly builder: ActionInventoryBuilder;
+    readonly serializer: ActionInventorySerializer;
 }
 
 export interface AnalyzeCommand {
@@ -20,7 +27,7 @@ export interface AnalyzeCommand {
     ): Promise<ActionInventory>;
 }
 
-export function createAnalyzeCommand(): AnalyzeCommand {
+export function createAnalyzeCommand(deps: AnalyzeCommandDeps): AnalyzeCommand {
     return {
         async execute(
             inputPath: string,
@@ -28,17 +35,13 @@ export function createAnalyzeCommand(): AnalyzeCommand {
         ): Promise<ActionInventory> {
             const fileContent = readFileSync(inputPath, "utf-8");
 
-            const parser = createTerraformPlanParser();
-            const parseResult = parser.parse(fileContent);
-
-            const db = createActionMappingDb();
-            const mapper = createResourceActionMapper(db);
+            const parseResult = deps.parser.parse(fileContent);
 
             const allPlanAndApply: InfrastructureActionEntry[] = [];
             const allApplyOnly: InfrastructureActionEntry[] = [];
 
             for (const resourceChange of parseResult.resourceChanges) {
-                const mapped = mapper.mapActions(resourceChange);
+                const mapped = deps.mapper.mapActions(resourceChange);
 
                 if (mapped.unknownType) {
                     output.warn(
@@ -50,13 +53,12 @@ export function createAnalyzeCommand(): AnalyzeCommand {
                 allApplyOnly.push(...mapped.applyOnly);
             }
 
-            const builder = createActionInventoryBuilder();
-            const inventory = builder.build(parseResult.metadata, {
+            const inventory = deps.builder.build(parseResult.metadata, {
                 planAndApply: allPlanAndApply,
                 applyOnly: allApplyOnly,
             });
 
-            output.log(JSON.stringify(inventory, null, 2));
+            output.log(deps.serializer.serialize(inventory));
 
             return inventory;
         },

@@ -1,5 +1,9 @@
+import { ZodError } from "zod";
 import type { ActionInventoryMetadata } from "../entities/action-inventory.js";
-import type { ResourceChange } from "../entities/terraform-plan.js";
+import type {
+    ResourceChange,
+    TerraformPlan,
+} from "../entities/terraform-plan.js";
 import { TerraformPlanSchema } from "../entities/terraform-plan.js";
 
 export interface ParseResult {
@@ -25,7 +29,21 @@ export function createTerraformPlanParser(): TerraformPlanParser {
                 throw new Error("Invalid JSON input");
             }
 
-            const plan = TerraformPlanSchema.parse(rawData);
+            let plan: TerraformPlan;
+            try {
+                plan = TerraformPlanSchema.parse(rawData);
+            } catch (error) {
+                if (error instanceof ZodError) {
+                    const details = error.issues
+                        .map(
+                            (issue) =>
+                                `${issue.path.join(".")}: ${issue.message}`,
+                        )
+                        .join("; ");
+                    throw new Error(`Invalid Terraform plan: ${details}`);
+                }
+                throw error;
+            }
 
             const awsResourceChanges = plan.resource_changes.filter((rc) =>
                 isAwsProvider(rc.provider_name),

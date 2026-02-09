@@ -93,7 +93,9 @@ describe("ParseTerraformPlan", () => {
             });
 
             // Act & Assert
-            expect(() => parser.parse(invalidPlan)).toThrow();
+            expect(() => parser.parse(invalidPlan)).toThrow(
+                "Invalid Terraform plan",
+            );
         });
     });
 });

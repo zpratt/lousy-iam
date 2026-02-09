@@ -1,8 +1,19 @@
 import { defineCommand, runMain } from "citty";
 import { consola } from "consola";
 import { createAnalyzeCommand } from "./commands/analyze.js";
+import { createActionMappingDb } from "./gateways/action-mapping-db.js";
+import { createActionInventoryBuilder } from "./use-cases/build-action-inventory.js";
+import { createResourceActionMapper } from "./use-cases/map-resource-actions.js";
+import { createTerraformPlanParser } from "./use-cases/parse-terraform-plan.js";
+import { createActionInventorySerializer } from "./use-cases/serialize-action-inventory.js";
 
-const analyzeUseCase = createAnalyzeCommand();
+const db = createActionMappingDb();
+const analyzeCommand = createAnalyzeCommand({
+    parser: createTerraformPlanParser(),
+    mapper: createResourceActionMapper(db),
+    builder: createActionInventoryBuilder(),
+    serializer: createActionInventorySerializer(),
+});
 
 const analyze = defineCommand({
     meta: {
@@ -18,7 +29,7 @@ const analyze = defineCommand({
         },
     },
     async run({ args }) {
-        await analyzeUseCase.execute(args.input, {
+        await analyzeCommand.execute(args.input, {
             log: (msg) => consola.log(msg),
             warn: (msg) => consola.warn(msg),
         });

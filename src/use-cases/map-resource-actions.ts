@@ -4,7 +4,7 @@ import {
     categorizeActions,
 } from "../entities/resource-actions.js";
 import type { ResourceChange } from "../entities/terraform-plan.js";
-import type { ActionMappingDb } from "../gateways/action-mapping-db.js";
+import type { ActionMappingDb } from "./action-mapping-db.port.js";
 
 export interface MappedResourceActions {
     readonly planAndApply: readonly InfrastructureActionEntry[];
@@ -43,25 +43,40 @@ export function createResourceActionMapper(
 
             const planAndApply: InfrastructureActionEntry[] = [];
             const applyOnly: InfrastructureActionEntry[] = [];
+            const seenPlanAndApply = new Set<string>();
+            const seenApplyOnly = new Set<string>();
 
             for (const category of categories) {
                 const actions = entry.actions[category];
                 const planActionStr = resourceChange.change.actions.join(",");
 
                 for (const action of actions) {
-                    const actionEntry: InfrastructureActionEntry = {
-                        action,
-                        resource: "*",
-                        purpose: `${category} for ${resourceChange.type}`,
-                        sourceResource: resourceChange.address,
-                        planAction: planActionStr,
-                        category,
-                    };
+                    const dedupeKey = `${action}|*`;
 
                     if (READ_CATEGORIES.has(category)) {
-                        planAndApply.push(actionEntry);
+                        if (!seenPlanAndApply.has(dedupeKey)) {
+                            planAndApply.push({
+                                action,
+                                resource: "*",
+                                purpose: `${category} for ${resourceChange.type}`,
+                                sourceResource: resourceChange.address,
+                                planAction: planActionStr,
+                                category,
+                            });
+                            seenPlanAndApply.add(dedupeKey);
+                        }
                     } else if (WRITE_CATEGORIES.has(category)) {
-                        applyOnly.push(actionEntry);
+                        if (!seenApplyOnly.has(dedupeKey)) {
+                            applyOnly.push({
+                                action,
+                                resource: "*",
+                                purpose: `${category} for ${resourceChange.type}`,
+                                sourceResource: resourceChange.address,
+                                planAction: planActionStr,
+                                category,
+                            });
+                            seenApplyOnly.add(dedupeKey);
+                        }
                     }
                 }
             }

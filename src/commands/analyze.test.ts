@@ -1,9 +1,41 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { buildPlanJson } from "../lib/test-plan-builder.js";
+import { createActionInventoryBuilder } from "../use-cases/build-action-inventory.js";
+import { createResourceActionMapper } from "../use-cases/map-resource-actions.js";
+import { createTerraformPlanParser } from "../use-cases/parse-terraform-plan.js";
+import { createActionInventorySerializer } from "../use-cases/serialize-action-inventory.js";
 import { createAnalyzeCommand } from "./analyze.js";
 
 vi.mock("node:fs");
+
+function buildCommand() {
+    const mockDb = {
+        lookupByTerraformType: vi.fn().mockImplementation((type: string) => {
+            if (type === "aws_s3_bucket") {
+                return {
+                    terraformType: "aws_s3_bucket",
+                    service: "s3",
+                    actions: {
+                        read: ["s3:GetBucketLocation"],
+                        create: ["s3:CreateBucket"],
+                        update: ["s3:PutBucketPolicy"],
+                        delete: ["s3:DeleteBucket"],
+                        tag: ["s3:PutBucketTagging"],
+                    },
+                };
+            }
+            return undefined;
+        }),
+    };
+
+    return createAnalyzeCommand({
+        parser: createTerraformPlanParser(),
+        mapper: createResourceActionMapper(mockDb),
+        builder: createActionInventoryBuilder(),
+        serializer: createActionInventorySerializer(),
+    });
+}
 
 describe("AnalyzeCommand", () => {
     describe("given a valid plan JSON file path", () => {
@@ -19,7 +51,7 @@ describe("AnalyzeCommand", () => {
             ]);
             vi.mocked(readFileSync).mockReturnValue(planJson);
 
-            const command = createAnalyzeCommand();
+            const command = buildCommand();
             const output: string[] = [];
             const mockConsole = {
                 log: (msg: string) => output.push(msg),
@@ -39,6 +71,39 @@ describe("AnalyzeCommand", () => {
                 inventory.infrastructureActions.applyOnly.length,
             ).toBeGreaterThan(0);
         });
+
+        it("should serialize output using snake_case keys", async () => {
+            // Arrange
+            const planJson = buildPlanJson([
+                {
+                    address: "aws_s3_bucket.main",
+                    type: "aws_s3_bucket",
+                    actions: ["create"],
+                    after: { bucket: "test-bucket" },
+                },
+            ]);
+            vi.mocked(readFileSync).mockReturnValue(planJson);
+
+            const command = buildCommand();
+            const output: string[] = [];
+            const mockConsole = {
+                log: (msg: string) => output.push(msg),
+                warn: vi.fn(),
+            };
+
+            // Act
+            await command.execute("plan.json", mockConsole);
+
+            // Assert
+            const serialized = JSON.parse(output[0] ?? "{}");
+            expect(serialized.metadata.iac_tool).toBe("terraform");
+            expect(serialized.toolchain_actions).toBeDefined();
+            expect(serialized.infrastructure_actions).toBeDefined();
+            expect(
+                serialized.infrastructure_actions.plan_and_apply,
+            ).toBeDefined();
+            expect(serialized.infrastructure_actions.apply_only).toBeDefined();
+        });
     });
 
     describe("given a plan with unknown resource types", () => {
@@ -54,7 +119,7 @@ describe("AnalyzeCommand", () => {
             ]);
             vi.mocked(readFileSync).mockReturnValue(planJson);
 
-            const command = createAnalyzeCommand();
+            const command = buildCommand();
             const mockConsole = {
                 log: vi.fn(),
                 warn: vi.fn(),
@@ -76,7 +141,7 @@ describe("AnalyzeCommand", () => {
             vi.mocked(readFileSync).mockImplementation(() => {
                 throw new Error("ENOENT: no such file or directory");
             });
-            const command = createAnalyzeCommand();
+            const command = buildCommand();
             const mockConsole = { log: vi.fn(), warn: vi.fn() };
 
             // Act & Assert

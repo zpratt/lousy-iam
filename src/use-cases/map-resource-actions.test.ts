@@ -183,4 +183,43 @@ describe("MapResourceActions", () => {
             expect(result.unknownType).toBe(true);
         });
     });
+
+    describe("given a resource with duplicate IAM actions across categories", () => {
+        it("should de-duplicate actions in apply_only", () => {
+            // Arrange
+            const resourceChange: ResourceChange = {
+                address: "aws_s3_bucket.main",
+                type: "aws_s3_bucket",
+                provider_name: "registry.terraform.io/hashicorp/aws",
+                change: {
+                    actions: ["create"],
+                    before: null,
+                    after: { bucket: "test-bucket" },
+                },
+            };
+            const mockDb = {
+                lookupByTerraformType: vi.fn().mockReturnValue({
+                    terraformType: "aws_s3_bucket",
+                    service: "s3",
+                    actions: {
+                        read: ["s3:GetBucketLocation"],
+                        create: ["s3:CreateBucket", "s3:PutBucketTagging"],
+                        update: [],
+                        delete: [],
+                        tag: ["s3:PutBucketTagging"],
+                    },
+                }),
+            };
+            const mapper = createResourceActionMapper(mockDb);
+
+            // Act
+            const result = mapper.mapActions(resourceChange);
+
+            // Assert
+            const taggingActions = result.applyOnly.filter(
+                (a) => a.action === "s3:PutBucketTagging",
+            );
+            expect(taggingActions).toHaveLength(1);
+        });
+    });
 });

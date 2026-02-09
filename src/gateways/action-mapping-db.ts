@@ -1,10 +1,5 @@
 import type { ResourceActionEntry } from "../entities/resource-actions.js";
-
-export interface ActionMappingDb {
-    lookupByTerraformType(
-        terraformType: string,
-    ): ResourceActionEntry | undefined;
-}
+import type { ActionMappingDb } from "../use-cases/action-mapping-db.port.js";
 
 const RESOURCE_ACTIONS: readonly ResourceActionEntry[] = [
     {
