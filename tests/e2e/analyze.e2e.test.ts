@@ -95,7 +95,7 @@ describe("analyze command e2e", () => {
 
                 planPath = join(workDir, "plan.json");
                 const content = readFileSync(planPath, "utf-8");
-                if (!content || content.trim().length === 0) {
+                if (!content.trim()) {
                     throw new Error("terraform show produced empty plan.json");
                 }
             } finally {
