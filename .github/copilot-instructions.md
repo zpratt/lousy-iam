@@ -226,3 +226,22 @@ describe('Config Loader', () => {
 - Modify tests to pass without fixing root cause
 - Add dependencies without explicit version numbers
 - Use type assertions (`as Type`) on external/API data
+
+# 🤖 Agent Protocols & Handoffs
+
+## 🛑 The "Definition of Done" Protocol
+You (the Coding Agent) are **strictly forbidden** from declaring a task complete until the code has passed a specialized review.
+
+## 🔄 Handoff Procedure
+When you have finished writing, refactoring, or fixing code:
+1.  **Self-Correction:** Briefly review your own code for syntax errors.
+2.  **Mandatory Handoff:** You **MUST** end your final response with this exact call-to-action block:
+
+> **⚠️ Security & Architecture Check Required**
+> I have completed the initial implementation. To ensure compliance with `.github/instructions/software-architecture.instructions.md` and security standards, please invoke the Hostile Reviewer:
+>
+> **@Reviewer check this code for evil paths and architectural violations.**
+
+## 📚 Context Awareness
+- **Architecture First:** You must read `.github/instructions/software-architecture.instructions.md` before writing any new feature.
+- **Security First:** If you are touching authentication, authorization, or user input parsing, you must explicitly state: *"I am checking this implementation against OWASP guidelines"* before generating code.
