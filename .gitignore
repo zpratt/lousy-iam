@@ -143,4 +143,3 @@ vite.config.ts.timestamp-*
 *.tfstate
 *.tfstate.backup
 *.tfplan
-.terraform.lock.hcl
