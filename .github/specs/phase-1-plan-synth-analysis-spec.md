@@ -143,7 +143,8 @@ For Phase 1, the action mapping database is implemented as an in-memory TypeScri
 
 ### Dependencies
 
-- No new dependencies required — uses existing `zod`, `citty`, `consola`
+- Runtime: No new runtime dependencies — feature code uses existing `zod`, `citty`, `consola`.
+- Dev/Test: New dev dependency `testcontainers` for end-to-end coverage (spinning up ephemeral services to validate the CLI against real integrations).
 
 ### Open Questions
 
