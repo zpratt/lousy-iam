@@ -29,7 +29,7 @@ describe("analyze command e2e", () => {
         const network = await new Network().start();
 
         const motoContainer = await new GenericContainer(
-            "motoserver/moto:latest",
+            "motoserver/moto:5.1.2",
         )
             .withNetwork(network)
             .withNetworkAliases("moto")
@@ -44,7 +44,7 @@ describe("analyze command e2e", () => {
             cpSync(FIXTURES_DIR, workDir, { recursive: true });
 
             const terraformContainer = await new GenericContainer(
-                "hashicorp/terraform:latest",
+                "hashicorp/terraform:1.12",
             )
                 .withNetwork(network)
                 .withBindMounts([

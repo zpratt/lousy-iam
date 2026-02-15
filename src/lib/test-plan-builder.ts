@@ -1,5 +1,5 @@
 import type { PlanAction } from "../entities/terraform-plan.js";
-import { TerraformPlanSchema } from "../entities/terraform-plan.js";
+import { TerraformPlanSchema } from "../use-cases/terraform-plan.schema.js";
 
 const AWS_PROVIDER = "registry.terraform.io/hashicorp/aws";
 

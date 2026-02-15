@@ -1,31 +1,18 @@
-import { z } from "zod";
+export type PlanAction = "no-op" | "create" | "read" | "update" | "delete";
 
-const PlanActionSchema = z.enum([
-    "no-op",
-    "create",
-    "read",
-    "update",
-    "delete",
-]);
+export interface ResourceChange {
+    readonly address: string;
+    readonly type: string;
+    readonly provider_name: string;
+    readonly change: {
+        readonly actions: readonly PlanAction[];
+        readonly before: Record<string, unknown> | null;
+        readonly after: Record<string, unknown> | null;
+    };
+}
 
-// Terraform plan JSON uses snake_case — these property names match the external format
-const ResourceChangeSchema = z.object({
-    address: z.string(),
-    type: z.string(),
-    provider_name: z.string(),
-    change: z.object({
-        actions: z.array(PlanActionSchema),
-        before: z.record(z.unknown()).nullable(),
-        after: z.record(z.unknown()).nullable(),
-    }),
-});
-
-export const TerraformPlanSchema = z.object({
-    format_version: z.string(),
-    terraform_version: z.string(),
-    resource_changes: z.array(ResourceChangeSchema),
-});
-
-export type TerraformPlan = z.infer<typeof TerraformPlanSchema>;
-export type ResourceChange = z.infer<typeof ResourceChangeSchema>;
-export type PlanAction = z.infer<typeof PlanActionSchema>;
+export interface TerraformPlan {
+    readonly format_version: string;
+    readonly terraform_version: string;
+    readonly resource_changes: readonly ResourceChange[];
+}

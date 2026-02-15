@@ -4,7 +4,7 @@ import type {
     ResourceChange,
     TerraformPlan,
 } from "../entities/terraform-plan.js";
-import { TerraformPlanSchema } from "../entities/terraform-plan.js";
+import { TerraformPlanSchema } from "./terraform-plan.schema.js";
 
 export interface ParseResult {
     readonly metadata: ActionInventoryMetadata;

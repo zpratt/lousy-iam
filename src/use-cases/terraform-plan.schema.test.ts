@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPlanObject } from "../lib/test-plan-builder.js";
-import { TerraformPlanSchema } from "./terraform-plan.js";
+import { TerraformPlanSchema } from "./terraform-plan.schema.js";
 
 describe("TerraformPlanSchema", () => {
     describe("given a valid Terraform plan JSON", () => {
