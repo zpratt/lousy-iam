@@ -7,7 +7,7 @@ export interface ActionEntry {
 
 export interface InfrastructureActionEntry extends ActionEntry {
     readonly sourceResource: string;
-    readonly planAction: string;
+    readonly planAction: readonly string[];
 }
 
 export interface ActionInventoryMetadata {

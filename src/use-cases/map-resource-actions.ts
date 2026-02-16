@@ -46,9 +46,10 @@ export function createResourceActionMapper(
             const seenPlanAndApply = new Set<string>();
             const seenApplyOnly = new Set<string>();
 
+            const planActions = resourceChange.change.actions;
+
             for (const category of categories) {
                 const actions = entry.actions[category];
-                const planActionStr = resourceChange.change.actions.join(",");
 
                 for (const action of actions) {
                     // Phase 1: resource ARN is always "*" (wildcard). Resource-level
@@ -63,7 +64,7 @@ export function createResourceActionMapper(
                                 resource: resourceArn,
                                 purpose: `${category} for ${resourceChange.type}`,
                                 sourceResource: resourceChange.address,
-                                planAction: planActionStr,
+                                planAction: planActions,
                                 category,
                             });
                             seenPlanAndApply.add(dedupeKey);
@@ -75,7 +76,7 @@ export function createResourceActionMapper(
                                 resource: resourceArn,
                                 purpose: `${category} for ${resourceChange.type}`,
                                 sourceResource: resourceChange.address,
-                                planAction: planActionStr,
+                                planAction: planActions,
                                 category,
                             });
                             seenApplyOnly.add(dedupeKey);

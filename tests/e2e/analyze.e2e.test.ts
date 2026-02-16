@@ -2,7 +2,7 @@ import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { GenericContainer, Network, Wait } from "testcontainers";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createAnalyzeCommand } from "../../src/commands/analyze.js";
 import { createActionMappingDb } from "../../src/gateways/action-mapping-db.js";
 import { createActionInventoryBuilder } from "../../src/use-cases/build-action-inventory.js";
@@ -24,6 +24,7 @@ function buildAnalyzeCommand() {
 
 describe("analyze command e2e", () => {
     let planPath: string;
+    let stablePlanDir: string;
 
     beforeAll(async () => {
         const network = await new Network().start();
@@ -102,7 +103,7 @@ describe("analyze command e2e", () => {
                         );
                     }
 
-                    const stablePlanDir = mkdtempSync(
+                    stablePlanDir = mkdtempSync(
                         join(tmpdir(), "lousy-iam-plan-"),
                     );
                     planPath = join(stablePlanDir, "plan.json");
@@ -116,6 +117,12 @@ describe("analyze command e2e", () => {
             }
         } finally {
             await network.stop();
+        }
+    });
+
+    afterAll(() => {
+        if (stablePlanDir) {
+            rmSync(stablePlanDir, { recursive: true, force: true });
         }
     });
 
