@@ -1,7 +1,7 @@
 ---
 name: Reviewer
 description: A hostile security and architecture reviewer that validates code against project standards and known attack vectors.
-model: claude-3-opus
+model: Claude Opus 4.6
 tools: ["*"]
 ---
 
