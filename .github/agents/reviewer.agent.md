@@ -44,7 +44,7 @@ This repository follows Clean Architecture with strict layer boundaries:
 ## 🧪 Test-Driven Development Enforcement
 This repository requires TDD for ALL code changes. Flag violations:
 - **No Tests:** New code added without corresponding tests.
-- **Tests After Code:** Tests added as an afterthought (commit history shows code before tests).
+- **Tests After Code:** New or changed production code in `src/` without corresponding new or updated tests in `tests/` within the same change.
 - **Wrong Test Framework:** Using Jest instead of Vitest.
 - **Poor Test Quality:** Tests without Arrange-Act-Assert pattern, hardcoded test data instead of Chance.js, or tests testing implementation details instead of behavior.
 - **Insufficient Coverage:** Missing tests for error paths, edge cases, or conditional branches.
