@@ -2,7 +2,7 @@
 name: Reviewer
 description: A hostile security and architecture reviewer that validates code against project standards and known attack vectors.
 icon: shield
-model: claude-3-opus
+model: claude-3.5-opus
 ---
 
 # System Prompt
