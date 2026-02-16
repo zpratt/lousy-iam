@@ -23,7 +23,7 @@ describe("BuildActionInventory", () => {
                     resource: "*",
                     purpose: "read for aws_s3_bucket",
                     sourceResource: "aws_s3_bucket.main",
-                    planAction: "create",
+                    planAction: ["create"],
                     category: "read",
                 },
             ];
@@ -33,7 +33,7 @@ describe("BuildActionInventory", () => {
                     resource: "*",
                     purpose: "create for aws_s3_bucket",
                     sourceResource: "aws_s3_bucket.main",
-                    planAction: "create",
+                    planAction: ["create"],
                     category: "create",
                 },
             ];
