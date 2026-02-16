@@ -51,13 +51,16 @@ export function createResourceActionMapper(
                 const planActionStr = resourceChange.change.actions.join(",");
 
                 for (const action of actions) {
-                    const dedupeKey = `${action}|*`;
+                    // Phase 1: resource ARN is always "*" (wildcard). Resource-level
+                    // ARN scoping is deferred to a future phase.
+                    const resourceArn = "*";
+                    const dedupeKey = `${action}|${resourceArn}`;
 
                     if (READ_CATEGORIES.has(category)) {
                         if (!seenPlanAndApply.has(dedupeKey)) {
                             planAndApply.push({
                                 action,
-                                resource: "*",
+                                resource: resourceArn,
                                 purpose: `${category} for ${resourceChange.type}`,
                                 sourceResource: resourceChange.address,
                                 planAction: planActionStr,
@@ -69,7 +72,7 @@ export function createResourceActionMapper(
                         if (!seenApplyOnly.has(dedupeKey)) {
                             applyOnly.push({
                                 action,
-                                resource: "*",
+                                resource: resourceArn,
                                 purpose: `${category} for ${resourceChange.type}`,
                                 sourceResource: resourceChange.address,
                                 planAction: planActionStr,

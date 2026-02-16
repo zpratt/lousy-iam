@@ -13,6 +13,9 @@ export interface ActionInventoryBuilder {
     ): ActionInventory;
 }
 
+// Toolchain ARN resources use placeholder syntax (e.g., ${state_bucket}) that consumers
+// must substitute with actual values for their environment. These are NOT JS template
+// literals — they are output verbatim in the action inventory JSON for user substitution.
 const TERRAFORM_TOOLCHAIN_PLAN_AND_APPLY: readonly ActionEntry[] = [
     {
         action: "sts:GetCallerIdentity",
@@ -22,12 +25,14 @@ const TERRAFORM_TOOLCHAIN_PLAN_AND_APPLY: readonly ActionEntry[] = [
     },
     {
         action: "s3:GetObject",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
         resource: "arn:aws:s3:::${state_bucket}/${state_key_prefix}*",
         purpose: "Read Terraform state",
         category: "toolchain",
     },
     {
         action: "s3:ListBucket",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
         resource: "arn:aws:s3:::${state_bucket}",
         purpose: "List state files",
         category: "toolchain",
@@ -35,6 +40,7 @@ const TERRAFORM_TOOLCHAIN_PLAN_AND_APPLY: readonly ActionEntry[] = [
     {
         action: "dynamodb:GetItem",
         resource:
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
             "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}",
         purpose: "Check lock",
         category: "toolchain",
@@ -44,12 +50,14 @@ const TERRAFORM_TOOLCHAIN_PLAN_AND_APPLY: readonly ActionEntry[] = [
 const TERRAFORM_TOOLCHAIN_APPLY_ONLY: readonly ActionEntry[] = [
     {
         action: "s3:PutObject",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
         resource: "arn:aws:s3:::${state_bucket}/${state_key_prefix}*",
         purpose: "Write Terraform state",
         category: "toolchain",
     },
     {
         action: "s3:DeleteObject",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
         resource: "arn:aws:s3:::${state_bucket}/${state_key_prefix}*",
         purpose: "Delete old state",
         category: "toolchain",
@@ -57,6 +65,7 @@ const TERRAFORM_TOOLCHAIN_APPLY_ONLY: readonly ActionEntry[] = [
     {
         action: "dynamodb:PutItem",
         resource:
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
             "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}",
         purpose: "Acquire lock",
         category: "toolchain",
@@ -64,6 +73,7 @@ const TERRAFORM_TOOLCHAIN_APPLY_ONLY: readonly ActionEntry[] = [
     {
         action: "dynamodb:DeleteItem",
         resource:
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
             "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}",
         purpose: "Release lock",
         category: "toolchain",

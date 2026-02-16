@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { TerraformPlan } from "../entities/terraform-plan.js";
 
 const PlanActionSchema = z.enum([
     "no-op",
@@ -24,4 +25,4 @@ export const TerraformPlanSchema = z.object({
     format_version: z.string(),
     terraform_version: z.string(),
     resource_changes: z.array(ResourceChangeSchema),
-});
+}) satisfies z.ZodType<TerraformPlan>;

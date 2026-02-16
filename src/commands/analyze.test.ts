@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
 import { buildPlanJson } from "../lib/test-plan-builder.js";
 import { createActionInventoryBuilder } from "../use-cases/build-action-inventory.js";
@@ -7,7 +7,7 @@ import { createTerraformPlanParser } from "../use-cases/parse-terraform-plan.js"
 import { createActionInventorySerializer } from "../use-cases/serialize-action-inventory.js";
 import { createAnalyzeCommand } from "./analyze.js";
 
-vi.mock("node:fs");
+vi.mock("node:fs/promises");
 
 function buildCommand() {
     const mockDb = {
@@ -49,7 +49,7 @@ describe("AnalyzeCommand", () => {
                     after: { bucket: "test-bucket" },
                 },
             ]);
-            vi.mocked(readFileSync).mockReturnValue(planJson);
+            vi.mocked(readFile).mockResolvedValue(planJson);
 
             const command = buildCommand();
             const output: string[] = [];
@@ -82,7 +82,7 @@ describe("AnalyzeCommand", () => {
                     after: { bucket: "test-bucket" },
                 },
             ]);
-            vi.mocked(readFileSync).mockReturnValue(planJson);
+            vi.mocked(readFile).mockResolvedValue(planJson);
 
             const command = buildCommand();
             const output: string[] = [];
@@ -106,6 +106,40 @@ describe("AnalyzeCommand", () => {
         });
     });
 
+    describe("given a plan with multiple resources of the same type", () => {
+        it("should de-duplicate IAM actions across resources", async () => {
+            // Arrange
+            const planJson = buildPlanJson([
+                {
+                    address: "aws_s3_bucket.first",
+                    type: "aws_s3_bucket",
+                    actions: ["create"],
+                    after: { bucket: "bucket-one" },
+                },
+                {
+                    address: "aws_s3_bucket.second",
+                    type: "aws_s3_bucket",
+                    actions: ["create"],
+                    after: { bucket: "bucket-two" },
+                },
+            ]);
+            vi.mocked(readFile).mockResolvedValue(planJson);
+
+            const command = buildCommand();
+            const mockConsole = { log: vi.fn(), warn: vi.fn() };
+
+            // Act
+            const inventory = await command.execute("plan.json", mockConsole);
+
+            // Assert — s3:CreateBucket should appear only once, not twice
+            const createActions =
+                inventory.infrastructureActions.applyOnly.filter(
+                    (entry) => entry.action === "s3:CreateBucket",
+                );
+            expect(createActions).toHaveLength(1);
+        });
+    });
+
     describe("given a plan with unknown resource types", () => {
         it("should warn about unmapped resource types", async () => {
             // Arrange
@@ -117,7 +151,7 @@ describe("AnalyzeCommand", () => {
                     after: {},
                 },
             ]);
-            vi.mocked(readFileSync).mockReturnValue(planJson);
+            vi.mocked(readFile).mockResolvedValue(planJson);
 
             const command = buildCommand();
             const mockConsole = {
@@ -138,9 +172,9 @@ describe("AnalyzeCommand", () => {
     describe("given an invalid file path", () => {
         it("should throw when file cannot be read", async () => {
             // Arrange
-            vi.mocked(readFileSync).mockImplementation(() => {
-                throw new Error("ENOENT: no such file or directory");
-            });
+            vi.mocked(readFile).mockRejectedValue(
+                new Error("ENOENT: no such file or directory"),
+            );
             const command = buildCommand();
             const mockConsole = { log: vi.fn(), warn: vi.fn() };
 
