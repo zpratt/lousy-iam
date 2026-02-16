@@ -229,19 +229,32 @@ describe('Config Loader', () => {
 
 # 🤖 Agent Protocols & Handoffs
 
-## 🛑 The "Definition of Done" Protocol
-You (the Coding Agent) are **strictly forbidden** from declaring a task complete until the code has passed a specialized review.
+## The "Definition of Done" Protocol
+Code changes require security and architecture review before completion.
 
-## 🔄 Handoff Procedure
+## Handoff Procedure
 When you have finished writing, refactoring, or fixing code:
-1.  **Self-Correction:** Briefly review your own code for syntax errors.
-2.  **Mandatory Handoff:** You **MUST** end your final response with this exact call-to-action block:
+1.  **Validate Locally:** Run `npx biome check && npm test` to verify code quality.
+2.  **Invoke Reviewer:** End your final response with this call-to-action:
 
 > **⚠️ Security & Architecture Check Required**
 > I have completed the initial implementation. To ensure compliance with `.github/instructions/software-architecture.instructions.md` and security standards, please invoke the Hostile Reviewer:
 >
 > **@Reviewer check this code for evil paths and architectural violations.**
 
-## 📚 Context Awareness
-- **Architecture First:** You must read `.github/instructions/software-architecture.instructions.md` before writing any new feature.
-- **Security First:** If you are touching authentication, authorization, or user input parsing, you must explicitly state: *"I am checking this implementation against OWASP guidelines"* before generating code.
+### Invocation Context
+The `@Reviewer` invocation works in:
+- **GitHub Copilot Chat** within an IDE
+- **Pull Request comments** on GitHub.com
+- **Issue discussions** where agent invocations are supported
+
+If the Reviewer agent is unavailable or errors after invocation, proceed with manual review by a human maintainer.
+
+### Escape Hatches
+- **Maximum Review Cycles:** 3 rounds. After 3 cycles without resolution, escalate to human reviewer.
+- **Disputed Findings:** If you cannot address a finding or believe it's incorrect, reply with "DISPUTED: [reason]" and escalate.
+- **Platform Limitations:** If `@Reviewer` invocation fails or is unsupported in the current context, document findings manually using the severity table format from `.github/agents/reviewer.agent.md`.
+
+## Context Awareness
+- Read `.github/instructions/software-architecture.instructions.md` before modifying code in `src/`.
+- When handling user input (CLI args, file content, environment variables), validate with Zod and check for path traversal, command injection, and prototype pollution.
