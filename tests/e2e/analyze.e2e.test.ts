@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { GenericContainer, Network, Wait } from "testcontainers";
@@ -45,7 +45,7 @@ describe("analyze command e2e", () => {
                 cpSync(FIXTURES_DIR, workDir, { recursive: true });
 
                 const terraformContainer = await new GenericContainer(
-                    "hashicorp/terraform:1.12",
+                    "hashicorp/terraform:1.12.0",
                 )
                     .withNetwork(network)
                     .withBindMounts([
@@ -94,15 +94,22 @@ describe("analyze command e2e", () => {
                         );
                     }
 
-                    planPath = join(workDir, "plan.json");
-                    const content = readFileSync(planPath, "utf-8");
+                    const rawPlanPath = join(workDir, "plan.json");
+                    const content = readFileSync(rawPlanPath, "utf-8");
                     if (!content.trim()) {
                         throw new Error(
                             "terraform show produced empty plan.json",
                         );
                     }
+
+                    const stablePlanDir = mkdtempSync(
+                        join(tmpdir(), "lousy-iam-plan-"),
+                    );
+                    planPath = join(stablePlanDir, "plan.json");
+                    cpSync(rawPlanPath, planPath);
                 } finally {
                     await terraformContainer.stop();
+                    rmSync(workDir, { recursive: true, force: true });
                 }
             } finally {
                 await motoContainer.stop();
