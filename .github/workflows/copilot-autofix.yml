@@ -1,0 +1,26 @@
+---
+name: Copilot Auto-Fix Loop
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.review.user.login == 'github-copilot[bot]' &&
+      (github.event.review.state == 'changes_requested' ||
+       github.event.review.state == 'commented')
+    steps:
+      - name: Post fix request comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --body "@copilot Please fix the issues identified in your review."
