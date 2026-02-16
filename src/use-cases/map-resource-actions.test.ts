@@ -185,7 +185,7 @@ describe("MapResourceActions", () => {
     });
 
     describe("given a resource with duplicate IAM actions across categories", () => {
-        it("should de-duplicate actions in apply_only", () => {
+        it("should de-duplicate and preserve the first category encountered", () => {
             // Arrange
             const resourceChange: ResourceChange = {
                 address: "aws_s3_bucket.main",
@@ -203,10 +203,10 @@ describe("MapResourceActions", () => {
                     service: "s3",
                     actions: {
                         read: ["s3:GetBucketLocation"],
-                        create: ["s3:CreateBucket", "s3:PutBucketTagging"],
+                        create: ["s3:CreateBucket", "s3:SharedAction"],
                         update: [],
                         delete: [],
-                        tag: ["s3:PutBucketTagging"],
+                        tag: ["s3:SharedAction"],
                     },
                 }),
             };
@@ -216,10 +216,11 @@ describe("MapResourceActions", () => {
             const result = mapper.mapActions(resourceChange);
 
             // Assert
-            const taggingActions = result.applyOnly.filter(
-                (a) => a.action === "s3:PutBucketTagging",
+            const sharedActions = result.applyOnly.filter(
+                (a) => a.action === "s3:SharedAction",
             );
-            expect(taggingActions).toHaveLength(1);
+            expect(sharedActions).toHaveLength(1);
+            expect(sharedActions[0]?.category).toBe("create");
         });
     });
 });

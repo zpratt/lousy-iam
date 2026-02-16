@@ -113,12 +113,12 @@ sequenceDiagram
 
     loop For each ResourceChange
         CLI->>Mapper: mapActions(resourceChange)
-        Mapper->>DB: lookupResourceActions(resourceType)
+        Mapper->>DB: lookupByTerraformType(resourceType)
         DB-->>Mapper: ActionMapping | undefined
         Mapper-->>CLI: MappedAction[]
     end
 
-    CLI->>Builder: buildInventory(metadata, mappedActions)
+    CLI->>Builder: build(metadata, mappedActions)
     Builder-->>CLI: ActionInventory
     CLI->>User: Output JSON to stdout
 ```
@@ -127,7 +127,7 @@ sequenceDiagram
 
 | Layer | Component | File | Purpose |
 |-------|-----------|------|---------|
-| Entity | TerraformPlan | `src/entities/terraform-plan.ts` | Zod schemas and types for plan JSON |
+| Entity | TerraformPlan | `src/entities/terraform-plan.ts` | TypeScript types for plan JSON |
 | Entity | ActionInventory | `src/entities/action-inventory.ts` | Types for action inventory output |
 | Entity | ResourceActions | `src/entities/resource-actions.ts` | Types and logic for resource-to-action mapping |
 | Use Case | ParseTerraformPlan | `src/use-cases/parse-terraform-plan.ts` | Parse and validate plan JSON, extract resource changes |
@@ -156,13 +156,14 @@ For Phase 1, the action mapping database is implemented as an in-memory TypeScri
 
 ### Task 1: Create Terraform Plan JSON Entity
 
-**Objective**: Define Zod schemas and TypeScript types for the Terraform plan JSON structure.
+**Objective**: Define TypeScript entity types for the Terraform plan JSON structure and Zod schemas for runtime validation in the use-case layer.
 
-**Context**: The entity layer defines the core data structures. Zod schemas provide runtime validation of the plan JSON input, which is external data. These types are used by the parse use case.
+**Context**: The entity layer defines the core data structures as plain TypeScript types (no Zod), in line with Clean Architecture. The use-case layer defines Zod schemas to provide runtime validation of the plan JSON input, which is external data. These types and schemas are used by the parse use case.
 
 **Affected files**:
 - `src/entities/terraform-plan.ts` (new)
-- `src/entities/terraform-plan.test.ts` (new)
+- `src/use-cases/terraform-plan.schema.ts` (new)
+- `src/use-cases/terraform-plan.schema.test.ts` (new)
 
 **Requirements**: Covers Story 1 acceptance criteria for parsing and validation.
 
