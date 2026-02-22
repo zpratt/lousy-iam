@@ -29,6 +29,30 @@ export interface AnalyzeCommand {
     ): Promise<ActionInventory>;
 }
 
+function mergeEntries(
+    entries: InfrastructureActionEntry[],
+    index: Map<string, number>,
+    incoming: readonly InfrastructureActionEntry[],
+): void {
+    for (const entry of incoming) {
+        const key = `${entry.action}|${entry.resource}`;
+        const existingIdx = index.get(key);
+        if (existingIdx !== undefined) {
+            const existing = entries[existingIdx] as InfrastructureActionEntry;
+            entries[existingIdx] = {
+                ...existing,
+                sourceResource: [
+                    ...existing.sourceResource,
+                    ...entry.sourceResource,
+                ],
+            };
+        } else {
+            index.set(key, entries.length);
+            entries.push(entry);
+        }
+    }
+}
+
 export function createAnalyzeCommand(deps: AnalyzeCommandDeps): AnalyzeCommand {
     return {
         async execute(
@@ -53,45 +77,13 @@ export function createAnalyzeCommand(deps: AnalyzeCommandDeps): AnalyzeCommand {
                     );
                 }
 
-                for (const entry of mapped.planAndApply) {
-                    const key = `${entry.action}|${entry.resource}`;
-                    const existingIdx = planAndApplyIndex.get(key);
-                    if (existingIdx !== undefined) {
-                        const existing = allPlanAndApply[existingIdx];
-                        if (existing) {
-                            allPlanAndApply[existingIdx] = {
-                                ...existing,
-                                sourceResource: [
-                                    ...existing.sourceResource,
-                                    ...entry.sourceResource,
-                                ],
-                            };
-                        }
-                    } else {
-                        planAndApplyIndex.set(key, allPlanAndApply.length);
-                        allPlanAndApply.push(entry);
-                    }
-                }
+                mergeEntries(
+                    allPlanAndApply,
+                    planAndApplyIndex,
+                    mapped.planAndApply,
+                );
 
-                for (const entry of mapped.applyOnly) {
-                    const key = `${entry.action}|${entry.resource}`;
-                    const existingIdx = applyOnlyIndex.get(key);
-                    if (existingIdx !== undefined) {
-                        const existing = allApplyOnly[existingIdx];
-                        if (existing) {
-                            allApplyOnly[existingIdx] = {
-                                ...existing,
-                                sourceResource: [
-                                    ...existing.sourceResource,
-                                    ...entry.sourceResource,
-                                ],
-                            };
-                        }
-                    } else {
-                        applyOnlyIndex.set(key, allApplyOnly.length);
-                        allApplyOnly.push(entry);
-                    }
-                }
+                mergeEntries(allApplyOnly, applyOnlyIndex, mapped.applyOnly);
             }
 
             const inventory = deps.builder.build(parseResult.metadata, {
