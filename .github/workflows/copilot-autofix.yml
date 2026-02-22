@@ -22,7 +22,8 @@ jobs:
       - name: Request Copilot auto-fix
         if: >
           github.event.review.state == 'commented' &&
-          github.event.review.user.login == 'Copilot'
+          github.event.review.user.login == 'Copilot' &&
+          github.event.pull_request.user.login == 'Copilot'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
