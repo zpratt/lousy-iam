@@ -113,6 +113,85 @@ describe("FormulationConfigSchema", () => {
         });
     });
 
+    describe("given a config with invalid github_org format", () => {
+        it("should reject org names with consecutive hyphens", () => {
+            const input = {
+                githubOrg: "my--org",
+                githubRepo: "repo",
+                resourcePrefix: "prefix",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject org names starting with a hyphen", () => {
+            const input = {
+                githubOrg: "-myorg",
+                githubRepo: "repo",
+                resourcePrefix: "prefix",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject org names with special characters", () => {
+            const input = {
+                githubOrg: "my org!",
+                githubRepo: "repo",
+                resourcePrefix: "prefix",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe("given a config with invalid github_repo format", () => {
+        it("should reject repo names with spaces", () => {
+            const input = {
+                githubOrg: "myorg",
+                githubRepo: "my repo",
+                resourcePrefix: "prefix",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe("given a config with invalid resource_prefix format", () => {
+        it("should reject resource prefixes with spaces", () => {
+            const input = {
+                githubOrg: "myorg",
+                githubRepo: "repo",
+                resourcePrefix: "my prefix",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should accept resource prefixes with template variables", () => {
+            const input = {
+                githubOrg: "myorg",
+                githubRepo: "repo",
+                // biome-ignore lint/suspicious/noTemplateCurlyInString: testing template variable pattern
+                resourcePrefix: "myteam-${environment}",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(true);
+        });
+    });
+
     describe("given a config with invalid max_session_duration", () => {
         it("should reject when below minimum (900)", () => {
             const input = {

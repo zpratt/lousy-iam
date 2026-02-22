@@ -30,7 +30,8 @@ so that the **CLI can generate correctly scoped trust and permission policies**.
 - When a user provides a valid JSON configuration file, the `CLI` shall parse and validate all required fields (`github_org`, `github_repo`, `resource_prefix`).
 - If a required configuration field is missing, then the `CLI` shall display a validation error identifying the missing field.
 - Where optional configuration fields are not provided, the `CLI` shall use default values (`plan_apply_separation: true`, `include_delete_actions: true`, `role_path: "/"`, `max_session_duration: 3600`).
-- When `use_github_environments` is `true`, the `CLI` shall require `github_environment_names` to be a non-empty object.
+- When `use_github_environments` is `true` and `github_environment_names` is provided, the `CLI` shall use the environment name in the trust policy subject.
+- When `use_github_environments` is `true` and `github_environment_names` is empty, the `CLI` shall use a `${github_environment_name}` template placeholder in the trust policy subject.
 - If the configuration file is not valid JSON, then the `CLI` shall display a descriptive parsing error.
 
 ### Story 2: Parse Action Inventory Input
