@@ -81,7 +81,7 @@ describe("ParseFormulationConfig", () => {
     describe("given invalid JSON string", () => {
         it("should throw a descriptive parsing error", () => {
             expect(() => parser.parse("not json")).toThrow(
-                "Invalid JSON: configuration file is not valid JSON",
+                /Invalid JSON: configuration file is not valid JSON/,
             );
         });
     });
@@ -93,6 +93,20 @@ describe("ParseFormulationConfig", () => {
             });
 
             expect(() => parser.parse(input)).toThrow();
+        });
+    });
+
+    describe("given JSON with prototype pollution keys", () => {
+        it("should ignore __proto__ key and parse safely", () => {
+            const org = chance.word();
+            const repo = chance.word();
+            const prefix = chance.word();
+            const input = `{"github_org":"${org}","github_repo":"${repo}","resource_prefix":"${prefix}","__proto__":{"isAdmin":true}}`;
+
+            const result = parser.parse(input);
+
+            expect(result.githubOrg).toBe(org);
+            expect((result as Record<string, unknown>).isAdmin).toBeUndefined();
         });
     });
 });

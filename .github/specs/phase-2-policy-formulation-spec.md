@@ -208,9 +208,9 @@ sequenceDiagram
 **Requirements**: Supports Stories 1, 3, 4, 5.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] `npm run build` passes
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] `npm run build` passes
 
 ### Task 2: Create Formulation Config Schema and Parser
 
@@ -227,11 +227,11 @@ sequenceDiagram
 **Requirements**: Covers Story 1 acceptance criteria.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] Schema validates well-formed config
-- [ ] Schema rejects missing required fields with descriptive errors
-- [ ] Defaults are applied for optional fields
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] Schema validates well-formed config
+- [x] Schema rejects missing required fields with descriptive errors
+- [x] Defaults are applied for optional fields
 
 ### Task 3: Create Action Inventory Schema and Parser
 
@@ -248,10 +248,10 @@ sequenceDiagram
 **Requirements**: Covers Story 2 acceptance criteria.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] Schema validates well-formed action inventory JSON
-- [ ] Schema rejects missing sections with descriptive errors
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] Schema validates well-formed action inventory JSON
+- [x] Schema rejects missing sections with descriptive errors
 
 ### Task 4: Create Build Permission Policy Use Case
 
@@ -266,12 +266,12 @@ sequenceDiagram
 **Requirements**: Covers Story 3 acceptance criteria.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] Actions grouped by service into statements
-- [ ] Descriptive Sids generated
-- [ ] Policy documents include Version 2012-10-17
-- [ ] Size estimation calculated
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] Actions grouped by service into statements
+- [x] Descriptive Sids generated
+- [x] Policy documents include Version 2012-10-17
+- [x] Size estimation calculated
 
 ### Task 5: Create Build Trust Policy Use Case
 
@@ -286,12 +286,12 @@ sequenceDiagram
 **Requirements**: Covers Story 4 acceptance criteria.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] Plan trust policy uses pull_request subject
-- [ ] Apply trust policy uses ref:refs/heads/main subject
-- [ ] GitHub Environments mode uses environment subject
-- [ ] Audience condition always included
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] Plan trust policy uses pull_request subject
+- [x] Apply trust policy uses ref:refs/heads/main subject
+- [x] GitHub Environments mode uses environment subject
+- [x] Audience condition always included
 
 ### Task 6: Create Formulate Policies Use Case and CLI Command
 
@@ -310,10 +310,10 @@ sequenceDiagram
 **Requirements**: Covers Story 5 acceptance criteria and end-to-end CLI integration.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] `npm run build` passes
-- [ ] CLI outputs valid role definitions JSON
-- [ ] Template variables section included in output
-- [ ] Two roles generated when plan_apply_separation is true
-- [ ] Single role generated when plan_apply_separation is false
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] `npm run build` passes
+- [x] CLI outputs valid role definitions JSON
+- [x] Template variables section included in output
+- [x] Two roles generated when plan_apply_separation is true
+- [x] Single role generated when plan_apply_separation is false

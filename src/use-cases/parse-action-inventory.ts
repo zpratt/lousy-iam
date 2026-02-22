@@ -13,9 +13,11 @@ export function createActionInventoryParser(): ActionInventoryParser {
             let rawData: unknown;
             try {
                 rawData = JSON.parse(jsonString);
-            } catch {
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
                 throw new Error(
-                    "Invalid JSON: action inventory file is not valid JSON",
+                    `Invalid JSON: action inventory file is not valid JSON (${message})`,
                 );
             }
 

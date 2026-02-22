@@ -37,8 +37,14 @@ function toSidSegment(service: string): string {
 
 function groupActionsByServiceAndResource(
     actions: readonly ActionEntry[],
-): Map<string, { actions: string[]; resource: string }> {
-    const groups = new Map<string, { actions: string[]; resource: string }>();
+): Map<
+    string,
+    { actions: string[]; actionSet: Set<string>; resource: string }
+> {
+    const groups = new Map<
+        string,
+        { actions: string[]; actionSet: Set<string>; resource: string }
+    >();
 
     for (const entry of actions) {
         const service = extractServicePrefix(entry.action);
@@ -46,12 +52,14 @@ function groupActionsByServiceAndResource(
         const existing = groups.get(key);
 
         if (existing) {
-            if (!existing.actions.includes(entry.action)) {
+            if (!existing.actionSet.has(entry.action)) {
+                existing.actionSet.add(entry.action);
                 existing.actions.push(entry.action);
             }
         } else {
             groups.set(key, {
                 actions: [entry.action],
+                actionSet: new Set([entry.action]),
                 resource: entry.resource,
             });
         }

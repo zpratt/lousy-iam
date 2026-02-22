@@ -42,7 +42,7 @@ describe("ParseActionInventory", () => {
     describe("given invalid JSON string", () => {
         it("should throw a descriptive error", () => {
             expect(() => parser.parse("not json")).toThrow(
-                "Invalid JSON: action inventory file is not valid JSON",
+                /Invalid JSON: action inventory file is not valid JSON/,
             );
         });
     });

@@ -26,6 +26,13 @@ function transformSnakeToCamel(data: unknown): unknown {
 
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
+        if (
+            key === "__proto__" ||
+            key === "constructor" ||
+            key === "prototype"
+        ) {
+            continue;
+        }
         const camelKey = keyMap[key] ?? key;
         result[camelKey] = value;
     }
@@ -38,9 +45,11 @@ export function createFormulationConfigParser(): FormulationConfigParser {
             let rawData: unknown;
             try {
                 rawData = JSON.parse(jsonString);
-            } catch {
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
                 throw new Error(
-                    "Invalid JSON: configuration file is not valid JSON",
+                    `Invalid JSON: configuration file is not valid JSON (${message})`,
                 );
             }
 
