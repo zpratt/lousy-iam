@@ -12,15 +12,9 @@ permissions:
 jobs:
   auto-fix:
     runs-on: ubuntu-latest
-    if: >-
-      github.event.review.user.login == 'github-copilot[bot]' &&
-      (github.event.review.state == 'changes_requested' ||
-       github.event.review.state == 'commented')
     steps:
-      - name: Post fix request comment
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Debug actor and event context
         run: |
-          gh pr comment "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" \
-            --body "@copilot Please fix the issues identified in your review."
+          echo "actor: ${{ github.actor }}"
+          echo "review.user.login: ${{ github.event.review.user.login }}"
+          echo "review.state: ${{ github.event.review.state }}"
