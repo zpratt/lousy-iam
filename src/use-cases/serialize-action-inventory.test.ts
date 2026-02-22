@@ -83,7 +83,7 @@ describe("ActionInventorySerializer", () => {
                             action: "s3:GetBucketLocation",
                             resource: "*",
                             purpose: "read for aws_s3_bucket",
-                            sourceResource: "aws_s3_bucket.main",
+                            sourceResource: ["aws_s3_bucket.main"],
                             planAction: ["create"],
                             category: "read",
                         },
@@ -93,7 +93,7 @@ describe("ActionInventorySerializer", () => {
                             action: "s3:CreateBucket",
                             resource: "*",
                             purpose: "create for aws_s3_bucket",
-                            sourceResource: "aws_s3_bucket.main",
+                            sourceResource: ["aws_s3_bucket.main"],
                             planAction: ["create"],
                             category: "create",
                         },
@@ -108,12 +108,16 @@ describe("ActionInventorySerializer", () => {
             // Assert
             const infraPlanAction =
                 result.infrastructure_actions.plan_and_apply[0];
-            expect(infraPlanAction.source_resource).toBe("aws_s3_bucket.main");
+            expect(infraPlanAction.source_resource).toEqual([
+                "aws_s3_bucket.main",
+            ]);
             expect(infraPlanAction.plan_action).toEqual(["create"]);
 
             const infraApplyAction =
                 result.infrastructure_actions.apply_only[0];
-            expect(infraApplyAction.source_resource).toBe("aws_s3_bucket.main");
+            expect(infraApplyAction.source_resource).toEqual([
+                "aws_s3_bucket.main",
+            ]);
             expect(infraApplyAction.plan_action).toEqual(["create"]);
         });
     });

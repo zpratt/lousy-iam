@@ -1,4 +1,6 @@
 import { readFile } from "node:fs/promises";
+import { defineCommand } from "citty";
+import { consola } from "consola";
 import type {
     ActionInventory,
     InfrastructureActionEntry,
@@ -39,8 +41,8 @@ export function createAnalyzeCommand(deps: AnalyzeCommandDeps): AnalyzeCommand {
 
             const allPlanAndApply: InfrastructureActionEntry[] = [];
             const allApplyOnly: InfrastructureActionEntry[] = [];
-            const seenPlanAndApply = new Set<string>();
-            const seenApplyOnly = new Set<string>();
+            const planAndApplyIndex = new Map<string, number>();
+            const applyOnlyIndex = new Map<string, number>();
 
             for (const resourceChange of parseResult.resourceChanges) {
                 const mapped = deps.mapper.mapActions(resourceChange);
@@ -53,17 +55,41 @@ export function createAnalyzeCommand(deps: AnalyzeCommandDeps): AnalyzeCommand {
 
                 for (const entry of mapped.planAndApply) {
                     const key = `${entry.action}|${entry.resource}`;
-                    if (!seenPlanAndApply.has(key)) {
+                    const existingIdx = planAndApplyIndex.get(key);
+                    if (existingIdx !== undefined) {
+                        const existing = allPlanAndApply[existingIdx];
+                        if (existing) {
+                            allPlanAndApply[existingIdx] = {
+                                ...existing,
+                                sourceResource: [
+                                    ...existing.sourceResource,
+                                    ...entry.sourceResource,
+                                ],
+                            };
+                        }
+                    } else {
+                        planAndApplyIndex.set(key, allPlanAndApply.length);
                         allPlanAndApply.push(entry);
-                        seenPlanAndApply.add(key);
                     }
                 }
 
                 for (const entry of mapped.applyOnly) {
                     const key = `${entry.action}|${entry.resource}`;
-                    if (!seenApplyOnly.has(key)) {
+                    const existingIdx = applyOnlyIndex.get(key);
+                    if (existingIdx !== undefined) {
+                        const existing = allApplyOnly[existingIdx];
+                        if (existing) {
+                            allApplyOnly[existingIdx] = {
+                                ...existing,
+                                sourceResource: [
+                                    ...existing.sourceResource,
+                                    ...entry.sourceResource,
+                                ],
+                            };
+                        }
+                    } else {
+                        applyOnlyIndex.set(key, allApplyOnly.length);
                         allApplyOnly.push(entry);
-                        seenApplyOnly.add(key);
                     }
                 }
             }
@@ -78,4 +104,29 @@ export function createAnalyzeCommand(deps: AnalyzeCommandDeps): AnalyzeCommand {
             return inventory;
         },
     };
+}
+
+export function createAnalyzeCittyCommand(deps: AnalyzeCommandDeps) {
+    const analyzeCommand = createAnalyzeCommand(deps);
+
+    return defineCommand({
+        meta: {
+            name: "analyze",
+            description:
+                "Analyze a Terraform plan JSON to produce an IAM action inventory",
+        },
+        args: {
+            input: {
+                type: "string",
+                description: "Path to Terraform plan JSON file",
+                required: true,
+            },
+        },
+        async run({ args }) {
+            await analyzeCommand.execute(args.input, {
+                log: (msg) => consola.log(msg),
+                warn: (msg) => consola.warn(msg),
+            });
+        },
+    });
 }

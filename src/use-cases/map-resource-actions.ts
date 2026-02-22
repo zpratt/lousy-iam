@@ -63,7 +63,7 @@ export function createResourceActionMapper(
                                 action,
                                 resource: resourceArn,
                                 purpose: `${category} for ${resourceChange.type}`,
-                                sourceResource: resourceChange.address,
+                                sourceResource: [resourceChange.address],
                                 planAction: planActions,
                                 category,
                             });
@@ -75,7 +75,7 @@ export function createResourceActionMapper(
                                 action,
                                 resource: resourceArn,
                                 purpose: `${category} for ${resourceChange.type}`,
-                                sourceResource: resourceChange.address,
+                                sourceResource: [resourceChange.address],
                                 planAction: planActions,
                                 category,
                             });

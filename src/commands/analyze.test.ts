@@ -131,12 +131,16 @@ describe("AnalyzeCommand", () => {
             // Act
             const inventory = await command.execute("plan.json", mockConsole);
 
-            // Assert — s3:CreateBucket should appear only once, not twice
+            // Assert — s3:CreateBucket should appear only once with both source resources aggregated
             const createActions =
                 inventory.infrastructureActions.applyOnly.filter(
                     (entry) => entry.action === "s3:CreateBucket",
                 );
             expect(createActions).toHaveLength(1);
+            expect(createActions[0]?.sourceResource).toEqual([
+                "aws_s3_bucket.first",
+                "aws_s3_bucket.second",
+            ]);
         });
     });
 

@@ -1,3 +1,5 @@
+import type { PlanAction } from "./terraform-plan.js";
+
 export interface ActionEntry {
     readonly action: string;
     readonly resource: string;
@@ -6,8 +8,8 @@ export interface ActionEntry {
 }
 
 export interface InfrastructureActionEntry extends ActionEntry {
-    readonly sourceResource: string;
-    readonly planAction: readonly string[];
+    readonly sourceResource: readonly string[];
+    readonly planAction: readonly PlanAction[];
 }
 
 export interface ActionInventoryMetadata {
