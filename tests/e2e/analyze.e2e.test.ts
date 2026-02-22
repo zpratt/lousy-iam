@@ -1,6 +1,7 @@
 import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { GenericContainer, Network, Wait } from "testcontainers";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createAnalyzeCommand } from "../../src/commands/analyze.js";
@@ -10,7 +11,10 @@ import { createResourceActionMapper } from "../../src/use-cases/map-resource-act
 import { createTerraformPlanParser } from "../../src/use-cases/parse-terraform-plan.js";
 import { createActionInventorySerializer } from "../../src/use-cases/serialize-action-inventory.js";
 
-const FIXTURES_DIR = resolve(import.meta.dirname, "fixtures/terraform");
+const FIXTURES_DIR = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "fixtures/terraform",
+);
 
 function buildAnalyzeCommand() {
     const db = createActionMappingDb();
@@ -227,8 +231,8 @@ describe("analyze command e2e", () => {
                 ...inventory.infrastructureActions.applyOnly,
             ];
 
-            const s3Entries = allEntries.filter(
-                (e) => e.sourceResource === "aws_s3_bucket.test",
+            const s3Entries = allEntries.filter((e) =>
+                e.sourceResource.includes("aws_s3_bucket.test"),
             );
 
             expect(s3Entries.length).toBeGreaterThan(0);

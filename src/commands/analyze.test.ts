@@ -142,6 +142,45 @@ describe("AnalyzeCommand", () => {
                 "aws_s3_bucket.second",
             ]);
         });
+
+        it("should merge planAction arrays when de-duplicating across different plan actions", async () => {
+            // Arrange
+            const planJson = buildPlanJson([
+                {
+                    address: "aws_s3_bucket.first",
+                    type: "aws_s3_bucket",
+                    actions: ["create"],
+                    after: { bucket: "bucket-one" },
+                },
+                {
+                    address: "aws_s3_bucket.second",
+                    type: "aws_s3_bucket",
+                    actions: ["update"],
+                    after: { bucket: "bucket-two" },
+                },
+            ]);
+            vi.mocked(readFile).mockResolvedValue(planJson);
+
+            const command = buildCommand();
+            const mockConsole = { log: vi.fn(), warn: vi.fn() };
+
+            // Act
+            const inventory = await command.execute("plan.json", mockConsole);
+
+            // Assert — s3:GetBucketLocation appears in read for both create and update,
+            // merged entry should contain both plan actions
+            const readActions =
+                inventory.infrastructureActions.planAndApply.filter(
+                    (entry) => entry.action === "s3:GetBucketLocation",
+                );
+            expect(readActions).toHaveLength(1);
+            expect(readActions[0]?.planAction).toContain("create");
+            expect(readActions[0]?.planAction).toContain("update");
+            expect(readActions[0]?.sourceResource).toEqual([
+                "aws_s3_bucket.first",
+                "aws_s3_bucket.second",
+            ]);
+        });
     });
 
     describe("given a plan with unknown resource types", () => {

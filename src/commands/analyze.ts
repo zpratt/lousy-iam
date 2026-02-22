@@ -39,12 +39,17 @@ function mergeEntries(
         const existingIdx = index.get(key);
         if (existingIdx !== undefined) {
             const existing = entries[existingIdx] as InfrastructureActionEntry;
+            const mergedPlanActions = new Set([
+                ...existing.planAction,
+                ...entry.planAction,
+            ]);
             entries[existingIdx] = {
                 ...existing,
                 sourceResource: [
                     ...existing.sourceResource,
                     ...entry.sourceResource,
                 ],
+                planAction: [...mergedPlanActions],
             };
         } else {
             index.set(key, entries.length);
