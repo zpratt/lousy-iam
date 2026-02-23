@@ -21,10 +21,10 @@ jobs:
 
       - name: Request Copilot auto-fix
         if: >
-          github.event.review.state == 'commented' &&
-          contains(github.event.review.body, '@copilot')
+          (github.event.review.state == 'commented' || github.event.review.state == 'changes_requested') &&
+          github.event.review.user.login == 'Copilot'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr comment ${{ github.event.pull_request.number }} \
-            --body "@copilot fix all code review comments"
+            --body "@copilot Please fix the issues identified in your review."

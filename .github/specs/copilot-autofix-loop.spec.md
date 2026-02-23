@@ -29,14 +29,14 @@ so that I can **avoid manually copy-pasting feedback to the bot and reduce time 
 #### Acceptance Criteria
 
 - When a `pull_request_review` event is submitted, the Copilot Auto-Fix Workflow shall execute.
-- When the workflow executes, if the reviewer identity (`github.event.review.user.login`) is strictly `github-copilot[bot]` AND the review state is strictly `changes_requested` or `commented`, the Copilot Auto-Fix Workflow shall proceed to the comment step.
+- When the workflow executes, if the reviewer identity (`github.event.review.user.login`) is strictly `Copilot` AND the review state is strictly `changes_requested` or `commented`, the Copilot Auto-Fix Workflow shall proceed to the comment step.
 - If the review state is `approved`, then the Copilot Auto-Fix Workflow shall exit without posting a comment.
 - When the comment step is triggered, the Copilot Auto-Fix Workflow shall use the GitHub CLI (`gh`) to post a comment on the Pull Request containing strictly the text: `@copilot Please fix the issues identified in your review.`
 - The Copilot Auto-Fix Workflow shall possess `issues: write` permissions to enable posting comments via `gh pr comment`.
 
 #### Notes
 
-- The workflow should only respond to reviews from `github-copilot[bot]`, not from human reviewers
+- The workflow should only respond to reviews from `Copilot`, not from human reviewers
 - The comment uses `@copilot` mention to trigger Copilot's response mechanism
 - No action is needed for approved reviews since there are no issues to fix
 - The workflow posts an issue comment on the pull request via `gh pr comment`, which requires `issues: write` permissions to succeed.
@@ -54,7 +54,7 @@ flowchart TD
     end
 
     subgraph Workflow["Copilot Auto-Fix Workflow"]
-        CHECK_REVIEWER{"Reviewer ==\ngithub-copilot[bot]?"}
+        CHECK_REVIEWER{"Reviewer ==\nCopilot?"}
         CHECK_STATE{"Review state ==\nchanges_requested\nOR commented?"}
         POST_COMMENT["Post comment:\n@copilot Please fix the issues\nidentified in your review."]
         EXIT_SKIP["Exit without action"]
@@ -79,7 +79,7 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant PR as Pull Request
-    participant Copilot as github-copilot[bot]
+    participant Copilot as Copilot
     participant GH as GitHub Actions
     participant Workflow as Copilot Auto-Fix Workflow
 
@@ -88,9 +88,9 @@ sequenceDiagram
     GH->>Workflow: Trigger workflow
     
     Workflow->>Workflow: Check reviewer identity
-    alt Reviewer is NOT github-copilot[bot]
+    alt Reviewer is NOT Copilot
         Workflow->>GH: Exit (no action)
-    else Reviewer is github-copilot[bot]
+    else Reviewer is Copilot
         Workflow->>Workflow: Check review state
         alt State is approved
             Workflow->>GH: Exit (no action)
@@ -141,7 +141,7 @@ None - requirements are fully specified in the acceptance criteria.
 **Verification**:
 - [x] Workflow file exists at `.github/workflows/copilot-autofix.yml`
 - [x] Workflow triggers on `pull_request_review` event with `submitted` type
-- [x] Workflow checks `github.event.review.user.login == 'github-copilot[bot]'`
+- [x] Workflow checks `github.event.review.user.login == 'Copilot'`
 - [x] Workflow checks review state is `changes_requested` or `commented`
 - [x] Workflow skips when review state is `approved`
 - [x] Workflow posts comment with exact text: `@copilot Please fix the issues identified in your review.`
