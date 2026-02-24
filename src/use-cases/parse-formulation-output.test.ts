@@ -87,4 +87,18 @@ describe("ParseFormulationOutput", () => {
             expect(() => parser.parse("{}")).toThrow();
         });
     });
+
+    describe("given JSON with prototype pollution keys", () => {
+        it("should strip __proto__ keys from template_variables", () => {
+            const parser = createFormulationOutputParser();
+            const json = buildValidFormulationOutputJson();
+            const data = JSON.parse(json);
+            data.template_variables.__proto__ = "polluted";
+            const result = parser.parse(JSON.stringify(data));
+
+            expect(
+                Object.keys(result.template_variables).includes("__proto__"),
+            ).toBe(false);
+        });
+    });
 });

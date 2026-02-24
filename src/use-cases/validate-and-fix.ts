@@ -67,7 +67,7 @@ function detectRoleType(roleName: string): RoleType {
 }
 
 function deepCopy<T>(obj: T): T {
-    return JSON.parse(JSON.stringify(obj)) as T;
+    return structuredClone(obj);
 }
 
 export function createValidateAndFixOrchestrator(

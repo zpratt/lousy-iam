@@ -145,10 +145,13 @@ export function createPolicyFixer(): PolicyFixer {
                     case "LP-046": {
                         const fixData = violation.fix_data;
                         if (fixData) {
-                            const action = fixData.action as string;
-                            const indices =
-                                fixData.statement_indices as number[];
-                            if (action && indices && indices.length > 1) {
+                            const action = fixData.action;
+                            const indices = fixData.statement_indices;
+                            if (
+                                typeof action === "string" &&
+                                Array.isArray(indices) &&
+                                indices.length > 1
+                            ) {
                                 let bestIndex = indices[0] ?? 0;
                                 let bestSpecificity = Infinity;
 
@@ -292,8 +295,14 @@ export function createPolicyFixer(): PolicyFixer {
                             const stmt = fixedStatements[index];
                             const fixData = violation.fix_data;
                             if (fixData) {
-                                const key = fixData.condition_key as string;
-                                const value = fixData.condition_value as string;
+                                const key = fixData.condition_key;
+                                const value = fixData.condition_value;
+                                if (
+                                    typeof key !== "string" ||
+                                    typeof value !== "string"
+                                ) {
+                                    break;
+                                }
                                 const stringLike = stmt.Condition.StringLike;
                                 if (stringLike) {
                                     const newStringLike = {
