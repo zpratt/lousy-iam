@@ -1,0 +1,53 @@
+{
+    "roles": [
+        {
+            "role_name": "fixable-github-apply",
+            "role_path": "/",
+            "description": "Role with auto-fixable violations",
+            "max_session_duration": 3600,
+            "permission_boundary_arn": null,
+            "trust_policy": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "AllowGitHubOIDC",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Federated": "arn:aws:iam::${account_id}:oidc-provider/token.actions.githubusercontent.com"
+                        },
+                        "Action": "sts:AssumeRoleWithWebIdentity",
+                        "Condition": {
+                            "StringLike": {
+                                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                                "token.actions.githubusercontent.com:sub": "repo:my-org/my-app:ref:refs/heads/main"
+                            }
+                        }
+                    }
+                ]
+            },
+            "permission_policies": [
+                {
+                    "policy_name": "fixable-permissions",
+                    "policy_document": {
+                        "Statement": [
+                            {
+                                "Sid": "",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "s3:GetObject",
+                                    "s3:GetObject",
+                                    "s3:PutObject"
+                                ],
+                                "Resource": "arn:aws:s3:::my-bucket/*"
+                            }
+                        ]
+                    },
+                    "estimated_size_bytes": 256
+                }
+            ]
+        }
+    ],
+    "template_variables": {
+        "account_id": "Target AWS account ID"
+    }
+}

@@ -18,10 +18,11 @@ const PolicyStatementSchema = z.object({
     Action: z.array(z.string()).max(MAX_ACTIONS_PER_STATEMENT),
     Resource: z.union([z.string(), z.array(z.string())]),
     Condition: ConditionBlockSchema.optional(),
+    NotAction: z.array(z.string()).optional(),
 });
 
 const PolicyDocumentSchema = z.object({
-    Version: z.literal("2012-10-17"),
+    Version: z.string().optional(),
     Statement: z.array(PolicyStatementSchema).max(MAX_STATEMENTS),
 });
 
@@ -31,12 +32,12 @@ const TrustPolicyStatementSchema = z.object({
     Principal: z.object({
         Federated: z.string(),
     }),
-    Action: z.literal("sts:AssumeRoleWithWebIdentity"),
+    Action: z.string(),
     Condition: ConditionBlockSchema,
 });
 
 const TrustPolicyDocumentSchema = z.object({
-    Version: z.literal("2012-10-17"),
+    Version: z.string().optional(),
     Statement: z.array(TrustPolicyStatementSchema).max(MAX_STATEMENTS),
 });
 

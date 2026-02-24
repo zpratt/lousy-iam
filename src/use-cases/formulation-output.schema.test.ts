@@ -113,7 +113,7 @@ describe("FormulationOutputSchema", () => {
             expect(result.success).toBe(false);
         });
 
-        it("should reject when trust policy action is wrong", () => {
+        it("should accept trust policy with non-standard action for validation", () => {
             const input = buildValidFormulationOutput();
             const role = input.roles[0];
             if (role) {
@@ -124,24 +124,23 @@ describe("FormulationOutputSchema", () => {
 
             const result = FormulationOutputSchema.safeParse(input);
 
-            expect(result.success).toBe(false);
+            expect(result.success).toBe(true);
         });
 
-        it("should reject when Version is wrong", () => {
+        it("should accept policy without Version for validation", () => {
             const input = buildValidFormulationOutput();
             const role = input.roles[0];
             if (role) {
                 (
                     role.permission_policies[0] as Record<string, unknown>
                 ).policy_document = {
-                    Version: "2008-10-17",
                     Statement: [],
                 };
             }
 
             const result = FormulationOutputSchema.safeParse(input);
 
-            expect(result.success).toBe(false);
+            expect(result.success).toBe(true);
         });
     });
 });
