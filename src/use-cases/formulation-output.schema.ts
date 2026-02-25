@@ -5,7 +5,10 @@ const MAX_STATEMENTS = 100;
 const MAX_ROLES = 10;
 const MAX_POLICIES_PER_ROLE = 10;
 
-const ConditionValueSchema = z.union([z.string(), z.array(z.string())]);
+const ConditionValueSchema = z.union([
+    z.string(),
+    z.array(z.string()).readonly(),
+]);
 
 const ConditionBlockSchema = z.record(
     z.string(),
@@ -15,15 +18,15 @@ const ConditionBlockSchema = z.record(
 const PolicyStatementSchema = z.object({
     Sid: z.string(),
     Effect: z.literal("Allow"),
-    Action: z.array(z.string()).max(MAX_ACTIONS_PER_STATEMENT),
-    Resource: z.union([z.string(), z.array(z.string())]),
+    Action: z.array(z.string()).max(MAX_ACTIONS_PER_STATEMENT).readonly(),
+    Resource: z.union([z.string(), z.array(z.string()).readonly()]),
     Condition: ConditionBlockSchema.optional(),
-    NotAction: z.array(z.string()).optional(),
+    NotAction: z.array(z.string()).readonly().optional(),
 });
 
 const PolicyDocumentSchema = z.object({
     Version: z.string().optional(),
-    Statement: z.array(PolicyStatementSchema).max(MAX_STATEMENTS),
+    Statement: z.array(PolicyStatementSchema).max(MAX_STATEMENTS).readonly(),
 });
 
 const TrustPolicyStatementSchema = z.object({
@@ -38,7 +41,10 @@ const TrustPolicyStatementSchema = z.object({
 
 const TrustPolicyDocumentSchema = z.object({
     Version: z.string().optional(),
-    Statement: z.array(TrustPolicyStatementSchema).max(MAX_STATEMENTS),
+    Statement: z
+        .array(TrustPolicyStatementSchema)
+        .max(MAX_STATEMENTS)
+        .readonly(),
 });
 
 const PermissionPolicySchema = z.object({

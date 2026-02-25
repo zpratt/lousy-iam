@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { createValidateCommand } from "../../src/commands/validate.js";
+import { UNSCOPED_ACTIONS } from "../../src/lib/unscoped-actions.js";
 import { createPolicyFixer } from "../../src/use-cases/fix-policy.js";
 import { createFormulationOutputParser } from "../../src/use-cases/parse-formulation-output.js";
 import { createValidateAndFixOrchestrator } from "../../src/use-cases/validate-and-fix.js";
@@ -12,14 +13,6 @@ const FIXTURES_DIR = resolve(
     dirname(fileURLToPath(import.meta.url)),
     "fixtures/formulation",
 );
-
-const UNSCOPED_ACTIONS = new Set([
-    "sts:GetCallerIdentity",
-    "ecs:DescribeClusters",
-    "ecs:DescribeServices",
-    "ecs:DescribeTaskDefinition",
-    "s3:GetBucketLocation",
-]);
 
 function buildValidateCommand() {
     return createValidateCommand({

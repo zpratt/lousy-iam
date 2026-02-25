@@ -83,21 +83,7 @@ export function createValidateAndFixOrchestrator(
                 const policyResults: PolicyValidationResult[] = [];
 
                 for (const permPolicy of role.permission_policies) {
-                    let currentDoc = deepCopy(permPolicy.policy_document) as {
-                        Version?: string | undefined;
-                        Statement: readonly {
-                            Sid: string;
-                            Effect: "Allow";
-                            Action: readonly string[];
-                            Resource: string | readonly string[];
-                            Condition?:
-                                | Record<
-                                      string,
-                                      Record<string, string | readonly string[]>
-                                  >
-                                | undefined;
-                        }[];
-                    };
+                    let currentDoc = deepCopy(permPolicy.policy_document);
                     let violations: readonly ValidationViolation[] = [];
                     let iterations = 0;
                     let previousFingerprint = "";
@@ -156,19 +142,7 @@ export function createValidateAndFixOrchestrator(
                     });
                 }
 
-                let trustDoc = deepCopy(role.trust_policy) as {
-                    Version?: string | undefined;
-                    Statement: readonly {
-                        Sid: string;
-                        Effect: "Allow";
-                        Principal: { Federated: string };
-                        Action: string;
-                        Condition: Record<
-                            string,
-                            Record<string, string | readonly string[]>
-                        >;
-                    }[];
-                };
+                let trustDoc = deepCopy(role.trust_policy);
                 let trustViolations: readonly ValidationViolation[] = [];
                 let trustIterations = 0;
                 let previousTrustFingerprint = "";

@@ -255,9 +255,9 @@ sequenceDiagram
 **Requirements**: Supports all Stories.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] `npm run build` passes
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] `npm run build` passes
 
 ### Task 2: Create Formulation Output Schema and Parser
 
@@ -274,10 +274,10 @@ sequenceDiagram
 **Requirements**: Supports Story 8.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] Schema validates well-formed Phase 2 output
-- [ ] Schema rejects malformed input with descriptive errors
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] Schema validates well-formed Phase 2 output
+- [x] Schema rejects malformed input with descriptive errors
 
 ### Task 3: Create Permission Policy Validator
 
@@ -292,10 +292,10 @@ sequenceDiagram
 **Requirements**: Covers Stories 1, 2, 3, 5, 6.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] All 26 permission policy rules produce correct violations
-- [ ] Rules return empty arrays for compliant policies
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] All 26 permission policy rules produce correct violations
+- [x] Rules return empty arrays for compliant policies
 
 ### Task 4: Create Trust Policy Validator
 
@@ -310,11 +310,11 @@ sequenceDiagram
 **Requirements**: Covers Story 4.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] All 7 trust policy rules produce correct violations
-- [ ] Plan role subject validation works correctly
-- [ ] Apply role subject validation works correctly
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] All 7 trust policy rules produce correct violations
+- [x] Plan role subject validation works correctly
+- [x] Apply role subject validation works correctly
 
 ### Task 5: Create Auto-Fix Logic
 
@@ -329,10 +329,10 @@ sequenceDiagram
 **Requirements**: Covers Story 7.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] All 10 auto-fix rules produce correct results
-- [ ] Fixes are idempotent (applying twice yields same result)
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] All 10 auto-fix rules produce correct results
+- [x] Fixes are idempotent (applying twice yields same result)
 
 ### Task 6: Create Validate-and-Fix Orchestrator
 
@@ -347,12 +347,12 @@ sequenceDiagram
 **Requirements**: Covers Story 8.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] Clean policies pass through with no changes
-- [ ] Auto-fixable violations are resolved in fix loop
-- [ ] Oscillation detection halts the loop
-- [ ] Max iteration limit is enforced
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] Clean policies pass through with no changes
+- [x] Auto-fixable violations are resolved in fix loop
+- [x] Oscillation detection halts the loop
+- [x] Max iteration limit is enforced
 
 ### Task 7: Create Validate Command and Wire Up
 
@@ -368,9 +368,9 @@ sequenceDiagram
 **Requirements**: Covers all Stories.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] `npm run build` passes
-- [ ] Validate command is registered as a subcommand
-- [ ] Command accepts `--input` argument
-- [ ] Command outputs validation results to stdout
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] `npm run build` passes
+- [x] Validate command is registered as a subcommand
+- [x] Command accepts `--input` argument
+- [x] Command outputs validation results to stdout

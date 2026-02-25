@@ -248,7 +248,7 @@ export function createPolicyFixer(): PolicyFixer {
             );
 
             return {
-                Version: fixedVersion as "2012-10-17",
+                Version: fixedVersion,
                 Statement: fixedStatements,
             };
         },
