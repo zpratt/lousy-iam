@@ -1,0 +1,135 @@
+{
+    "roles": [
+        {
+            "role_name": "my-app-github-plan",
+            "role_path": "/",
+            "description": "Plan role for my-app GitHub Actions OIDC",
+            "max_session_duration": 3600,
+            "permission_boundary_arn": null,
+            "trust_policy": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "AllowGitHubOIDC",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Federated": "arn:aws:iam::${account_id}:oidc-provider/token.actions.githubusercontent.com"
+                        },
+                        "Action": "sts:AssumeRoleWithWebIdentity",
+                        "Condition": {
+                            "StringEquals": {
+                                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                                "token.actions.githubusercontent.com:sub": "repo:my-org/my-app:pull_request"
+                            }
+                        }
+                    }
+                ]
+            },
+            "permission_policies": [
+                {
+                    "policy_name": "my-app-plan-permissions",
+                    "policy_document": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Sid": "ToolchainPlanAndApply",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "sts:GetCallerIdentity",
+                                    "s3:GetObject",
+                                    "s3:PutObject",
+                                    "s3:ListBucket",
+                                    "dynamodb:GetItem",
+                                    "dynamodb:PutItem"
+                                ],
+                                "Resource": "arn:aws:s3:::my-app-state-*"
+                            },
+                            {
+                                "Sid": "InfrastructureRead",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "ecs:DescribeClusters",
+                                    "ecs:DescribeServices",
+                                    "ecs:DescribeTaskDefinition",
+                                    "s3:GetBucketLocation",
+                                    "s3:GetBucketPolicy",
+                                    "s3:GetBucketTagging"
+                                ],
+                                "Resource": "arn:aws:ecs:us-east-1:*:cluster/my-app-*"
+                            }
+                        ]
+                    },
+                    "estimated_size_bytes": 512
+                }
+            ]
+        },
+        {
+            "role_name": "my-app-github-apply",
+            "role_path": "/",
+            "description": "Apply role for my-app GitHub Actions OIDC",
+            "max_session_duration": 3600,
+            "permission_boundary_arn": null,
+            "trust_policy": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "AllowGitHubOIDC",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Federated": "arn:aws:iam::${account_id}:oidc-provider/token.actions.githubusercontent.com"
+                        },
+                        "Action": "sts:AssumeRoleWithWebIdentity",
+                        "Condition": {
+                            "StringEquals": {
+                                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                                "token.actions.githubusercontent.com:sub": "repo:my-org/my-app:ref:refs/heads/main"
+                            }
+                        }
+                    }
+                ]
+            },
+            "permission_policies": [
+                {
+                    "policy_name": "my-app-apply-permissions",
+                    "policy_document": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Sid": "ToolchainApply",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "sts:GetCallerIdentity",
+                                    "s3:GetObject",
+                                    "s3:PutObject",
+                                    "s3:ListBucket",
+                                    "dynamodb:GetItem",
+                                    "dynamodb:PutItem"
+                                ],
+                                "Resource": "arn:aws:s3:::my-app-state-*"
+                            },
+                            {
+                                "Sid": "InfrastructureWrite",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "ecs:CreateCluster",
+                                    "ecs:CreateService",
+                                    "ecs:UpdateService",
+                                    "ecs:RegisterTaskDefinition",
+                                    "s3:CreateBucket",
+                                    "s3:PutBucketPolicy",
+                                    "s3:PutBucketTagging"
+                                ],
+                                "Resource": "arn:aws:ecs:us-east-1:*:cluster/my-app-*"
+                            }
+                        ]
+                    },
+                    "estimated_size_bytes": 640
+                }
+            ]
+        }
+    ],
+    "template_variables": {
+        "account_id": "Target AWS account ID",
+        "region": "Target AWS region"
+    }
+}
