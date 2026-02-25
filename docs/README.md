@@ -30,21 +30,11 @@ lousy-iam automates the derivation of tight, plan-driven IAM policies so your Gi
 
 lousy-iam works in two phases:
 
-```
-Terraform plan JSON
-        │
-        ▼
-┌───────────────┐
-│    analyze    │  Phase 1: maps every resource change to its required IAM actions
-└───────────────┘
-        │ action inventory JSON
-        ▼
-┌───────────────┐
-│   formulate   │  Phase 2: builds trust + permission policy documents for two OIDC roles
-└───────────────┘
-        │ roles JSON
-        ▼
-Provisioning pipeline  (Terraform, CDK, CloudFormation — whatever creates the IAM roles)
+```mermaid
+flowchart TD
+    A[Terraform plan JSON] --> B[analyze\nPhase 1: maps every resource change\nto its required IAM actions]
+    B -->|action inventory JSON| C[formulate\nPhase 2: builds trust + permission\npolicy documents for two OIDC roles]
+    C -->|roles JSON| D[Provisioning pipeline\nTerraform / CDK / CloudFormation\ncreates the IAM roles in AWS]
 ```
 
 1. **[analyze](./analyze-command.md)** reads `terraform show -json` output, looks up each resource type in the [action mapping database](./action-mapping-database.md), and emits a structured action inventory JSON. Actions are split into `plan_and_apply` (read-only, both roles need them) and `apply_only` (write operations, apply role only).
@@ -59,12 +49,12 @@ Provisioning pipeline  (Terraform, CDK, CloudFormation — whatever creates the 
 |---------|-------------|
 | **Plan-JSON-driven** | Works from `terraform show -json` output — fully resolved resources with accurate planned actions (`create`, `update`, `delete`, `no-op`) |
 | **Two-role architecture** | Separate plan (read-only) and apply (full CRUD) roles with distinct trust scopes, enforced by default |
-| **OIDC trust policies** | GitHub Actions federation via `AssumeRoleWithWebIdentity`, scoped to your org, repo, and branch or environment |
+| **OIDC trust policies** | GitHub Actions federation via `AssumeRoleWithWebIdentity`, scoped to your org, repo, and main branch or environment |
 | **Toolchain permissions** | Automatically includes Terraform state backend permissions (S3 + DynamoDB) in every output |
 | **Template variables** | Outputs portable policy documents with `${account_id}`, `${region}`, and other placeholders your pipeline resolves at creation time |
 | **Delete-action guard** | Optional `include_delete_actions: false` flag excludes destructive IAM actions from the apply role |
 | **GitHub Environments** | Optional environment-scoped trust for multi-environment pipelines |
-| **Extensible action mapping** | Built-in database covering 16 AWS resource types; straightforward to extend for any Terraform resource |
+| **Extensible action mapping** | Built-in database covering 16 AWS resource types; straightforward to extend for any AWS Terraform resource type (from the `hashicorp/aws` provider) |
 | **Cross-resource deduplication** | When multiple resources require the same IAM action, entries are merged and all source resources are preserved for full traceability |
 
 ### Supported AWS Resource Types
@@ -128,7 +118,7 @@ Parses a Terraform plan JSON file (`terraform show -json`) and produces an actio
 lousy-iam formulate --input <action-inventory.json> --config <formulation-config.json>
 ```
 
-Transforms the action inventory into production-ready IAM role definitions, including OIDC trust policies for GitHub Actions and permission policies grouped by AWS service. Supports configurable trust scopes (branch-based or GitHub Environments), optional delete-action exclusion, and permission boundaries.
+Transforms the action inventory into production-ready IAM role definitions, including OIDC trust policies for GitHub Actions and permission policies grouped by AWS service. Supports configurable trust scopes (main-branch-based or GitHub Environments), optional delete-action exclusion, and permission boundaries.
 
 → [Full reference](./formulate-command.md) · [Configuration reference](./configuration.md)
 
@@ -144,7 +134,7 @@ Transforms the action inventory into production-ready IAM role definitions, incl
     {
       "role_name": "myteam-github-plan",
       "role_path": "/",
-      "description": "Read-only role for terraform plan on pull requests",
+      "description": "Read-only role for terraform plan / cdk diff on pull requests",
       "max_session_duration": 3600,
       "permission_boundary_arn": null,
       "trust_policy": { "...": "OIDC trust scoped to pull_request events" },
@@ -153,7 +143,7 @@ Transforms the action inventory into production-ready IAM role definitions, incl
     {
       "role_name": "myteam-github-apply",
       "role_path": "/",
-      "description": "Full CRUD role for terraform apply on merge to main",
+      "description": "Full CRUD role for terraform apply / cdk deploy on merge to main",
       "max_session_duration": 3600,
       "permission_boundary_arn": null,
       "trust_policy": { "...": "OIDC trust scoped to ref:refs/heads/main" },
@@ -170,6 +160,6 @@ Transforms the action inventory into production-ready IAM role definitions, incl
 }
 ```
 
-The `template_variables` object lists every placeholder present in the policy documents so your pipeline knows exactly what to substitute before creating the IAM roles.
+The `template_variables` object lists the primary placeholders that `formulate` exposes so your pipeline knows what to substitute before creating the IAM roles. Additional placeholders may appear directly in the generated policy documents and should also be substituted as appropriate for your environment.
 
 → [Formulate Command](./formulate-command.md) for the full output schema
