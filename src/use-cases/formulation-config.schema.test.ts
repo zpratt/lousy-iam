@@ -254,6 +254,19 @@ describe("FormulationConfigSchema", () => {
             expect(result.success).toBe(false);
         });
 
+        it("should reject account IDs longer than 12 digits", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                accountId: "1234567890123",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+
         it("should reject account IDs with non-digit characters", () => {
             const input = {
                 githubOrg: chance.word(),
@@ -280,6 +293,32 @@ describe("FormulationConfigSchema", () => {
             const result = FormulationConfigSchema.parse(input);
 
             expect(result.region).toBe("us-east-1");
+        });
+
+        it("should accept a GovCloud region", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                region: "us-gov-west-1",
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.region).toBe("us-gov-west-1");
+        });
+
+        it("should accept a multi-character middle segment region", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                region: "ap-southeast-1",
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.region).toBe("ap-southeast-1");
         });
     });
 

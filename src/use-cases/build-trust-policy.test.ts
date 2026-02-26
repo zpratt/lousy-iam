@@ -210,6 +210,17 @@ describe("BuildTrustPolicy", () => {
                     `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
                 );
             });
+
+            it("should reference OIDC provider with account_id placeholder when accountId is null", () => {
+                const config = buildConfig({ accountId: null });
+
+                const result = builder.buildApplyTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toContain(
+                    // biome-ignore lint/suspicious/noTemplateCurlyInString: testing IAM ARN placeholder
+                    "${account_id}",
+                );
+            });
         });
     });
 });
