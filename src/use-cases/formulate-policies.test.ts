@@ -18,6 +18,8 @@ function buildConfig(
         githubOrg: chance.word(),
         githubRepo: chance.word(),
         resourcePrefix: chance.word(),
+        accountId: null,
+        region: null,
         planApplySeparation: true,
         includeDeleteActions: true,
         useGithubEnvironments: false,
@@ -242,6 +244,93 @@ describe("FormulatePolicies", () => {
             expect(result.template_variables).toHaveProperty("resource_prefix");
             expect(result.template_variables.org).toBe(config.githubOrg);
             expect(result.template_variables.repo).toBe(config.githubRepo);
+        });
+
+        it("should use actual account_id in template_variables when provided", () => {
+            const mockPermissionBuilder = {
+                buildPlanPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+                buildApplyPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+            };
+            const mockTrustBuilder = {
+                buildPlanTrust: vi.fn().mockReturnValue(buildMockTrustPolicy()),
+                buildApplyTrust: vi
+                    .fn()
+                    .mockReturnValue(buildMockTrustPolicy()),
+            };
+
+            const formulator = createPolicyFormulator({
+                permissionPolicyBuilder: mockPermissionBuilder,
+                trustPolicyBuilder: mockTrustBuilder,
+            });
+
+            const accountId = String(
+                chance.integer({ min: 100000000000, max: 999999999999 }),
+            );
+            const config = buildConfig({ accountId });
+            const result = formulator.formulate(buildInventory(), config);
+
+            expect(result.template_variables.account_id).toBe(accountId);
+        });
+
+        it("should use actual region in template_variables when provided", () => {
+            const mockPermissionBuilder = {
+                buildPlanPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+                buildApplyPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+            };
+            const mockTrustBuilder = {
+                buildPlanTrust: vi.fn().mockReturnValue(buildMockTrustPolicy()),
+                buildApplyTrust: vi
+                    .fn()
+                    .mockReturnValue(buildMockTrustPolicy()),
+            };
+
+            const formulator = createPolicyFormulator({
+                permissionPolicyBuilder: mockPermissionBuilder,
+                trustPolicyBuilder: mockTrustBuilder,
+            });
+
+            const region = "us-west-2";
+            const config = buildConfig({ region });
+            const result = formulator.formulate(buildInventory(), config);
+
+            expect(result.template_variables.region).toBe(region);
+        });
+
+        it("should use descriptive placeholder for account_id when not provided", () => {
+            const mockPermissionBuilder = {
+                buildPlanPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+                buildApplyPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+            };
+            const mockTrustBuilder = {
+                buildPlanTrust: vi.fn().mockReturnValue(buildMockTrustPolicy()),
+                buildApplyTrust: vi
+                    .fn()
+                    .mockReturnValue(buildMockTrustPolicy()),
+            };
+
+            const formulator = createPolicyFormulator({
+                permissionPolicyBuilder: mockPermissionBuilder,
+                trustPolicyBuilder: mockTrustBuilder,
+            });
+
+            const config = buildConfig({ accountId: null });
+            const result = formulator.formulate(buildInventory(), config);
+
+            expect(result.template_variables.account_id).toBe(
+                "Target AWS account ID",
+            );
         });
 
         it("should use config values for role metadata", () => {

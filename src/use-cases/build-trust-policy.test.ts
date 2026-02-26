@@ -12,6 +12,8 @@ function buildConfig(
         githubOrg: chance.word(),
         githubRepo: chance.word(),
         resourcePrefix: chance.word(),
+        accountId: null,
+        region: null,
         planApplySeparation: true,
         includeDeleteActions: true,
         useGithubEnvironments: false,
@@ -77,6 +79,19 @@ describe("BuildTrustPolicy", () => {
                 );
                 expect(result.Statement[0]?.Principal.Federated).toContain(
                     "token.actions.githubusercontent.com",
+                );
+            });
+
+            it("should use actual account ID in OIDC ARN when accountId is provided", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({ accountId });
+
+                const result = builder.buildPlanTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
                 );
             });
 
@@ -180,6 +195,19 @@ describe("BuildTrustPolicy", () => {
 
                 expect(result.Statement[0]?.Action).toBe(
                     "sts:AssumeRoleWithWebIdentity",
+                );
+            });
+
+            it("should use actual account ID in OIDC ARN when accountId is provided", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({ accountId });
+
+                const result = builder.buildApplyTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
                 );
             });
         });

@@ -15,6 +15,7 @@ function transformSnakeToCamel(data: unknown): unknown {
         github_org: "githubOrg",
         github_repo: "githubRepo",
         resource_prefix: "resourcePrefix",
+        account_id: "accountId",
         plan_apply_separation: "planApplySeparation",
         include_delete_actions: "includeDeleteActions",
         use_github_environments: "useGithubEnvironments",

@@ -48,10 +48,15 @@ describe("ParseFormulationConfig", () => {
 
     describe("given valid JSON with all optional fields", () => {
         it("should parse with provided values", () => {
+            const accountId = String(
+                chance.integer({ min: 100000000000, max: 999999999999 }),
+            );
             const input = JSON.stringify({
                 github_org: chance.word(),
                 github_repo: chance.word(),
                 resource_prefix: chance.word(),
+                account_id: accountId,
+                region: "us-west-2",
                 plan_apply_separation: false,
                 include_delete_actions: false,
                 use_github_environments: true,
@@ -64,6 +69,8 @@ describe("ParseFormulationConfig", () => {
 
             const result = parser.parse(input);
 
+            expect(result.accountId).toBe(accountId);
+            expect(result.region).toBe("us-west-2");
             expect(result.planApplySeparation).toBe(false);
             expect(result.includeDeleteActions).toBe(false);
             expect(result.useGithubEnvironments).toBe(true);

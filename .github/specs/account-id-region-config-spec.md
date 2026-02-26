@@ -131,9 +131,9 @@ sequenceDiagram
 **Requirements**: Supports Stories 1, 2.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] `npm run build` passes
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] `npm run build` passes
 
 ### Task 2: Update Schema and Parser for account_id and region
 
@@ -150,13 +150,13 @@ sequenceDiagram
 **Requirements**: Covers Stories 1, 2 validation acceptance criteria.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] Schema accepts valid account_id and region
-- [ ] Schema rejects invalid account_id format
-- [ ] Schema rejects invalid region format
-- [ ] Schema defaults both to null when omitted
-- [ ] Parser transforms snake_case `account_id` to camelCase `accountId`
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] Schema accepts valid account_id and region
+- [x] Schema rejects invalid account_id format
+- [x] Schema rejects invalid region format
+- [x] Schema defaults both to null when omitted
+- [x] Parser transforms snake_case `account_id` to camelCase `accountId`
 
 ### Task 3: Update Trust Policy Builder for accountId Resolution
 
@@ -171,10 +171,10 @@ sequenceDiagram
 **Requirements**: Covers Story 1 acceptance criteria for trust policy substitution.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] Trust policy uses actual account ID in ARN when provided
-- [ ] Trust policy uses `${account_id}` placeholder when accountId is null
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] Trust policy uses actual account ID in ARN when provided
+- [x] Trust policy uses `${account_id}` placeholder when accountId is null
 
 ### Task 4: Update Formulate Policies for Template Variable Resolution
 
@@ -189,8 +189,8 @@ sequenceDiagram
 **Requirements**: Covers Stories 1, 2 template_variables acceptance criteria.
 
 **Verification**:
-- [ ] `npm test` passes
-- [ ] `npx biome check` passes
-- [ ] template_variables shows actual account_id when provided
-- [ ] template_variables shows actual region when provided
-- [ ] template_variables shows descriptive placeholders when values are null
+- [x] `npm test` passes
+- [x] `npx biome check` passes
+- [x] template_variables shows actual account_id when provided
+- [x] template_variables shows actual region when provided
+- [x] template_variables shows descriptive placeholders when values are null
