@@ -293,6 +293,115 @@ const RESOURCE_ACTIONS: readonly ResourceActionEntry[] = [
             tag: ["rds:AddTagsToResource", "rds:RemoveTagsFromResource"],
         },
     },
+    {
+        terraformType: "aws_dynamodb_table",
+        service: "dynamodb",
+        actions: {
+            read: [
+                "dynamodb:DescribeTable",
+                "dynamodb:DescribeContinuousBackups",
+                "dynamodb:DescribeTimeToLive",
+                "dynamodb:ListTagsOfResource",
+            ],
+            create: [
+                "dynamodb:CreateTable",
+                "dynamodb:UpdateTimeToLive",
+                "dynamodb:UpdateContinuousBackups",
+            ],
+            update: [
+                "dynamodb:UpdateTable",
+                "dynamodb:UpdateTimeToLive",
+                "dynamodb:UpdateContinuousBackups",
+            ],
+            delete: ["dynamodb:DeleteTable"],
+            tag: ["dynamodb:TagResource", "dynamodb:UntagResource"],
+        },
+    },
+    {
+        terraformType: "aws_kms_key",
+        service: "kms",
+        actions: {
+            read: [
+                "kms:DescribeKey",
+                "kms:GetKeyPolicy",
+                "kms:GetKeyRotationStatus",
+                "kms:ListResourceTags",
+            ],
+            create: ["kms:CreateKey", "kms:PutKeyPolicy"],
+            update: [
+                "kms:PutKeyPolicy",
+                "kms:EnableKeyRotation",
+                "kms:DisableKeyRotation",
+                "kms:EnableKey",
+                "kms:DisableKey",
+                "kms:UpdateKeyDescription",
+            ],
+            delete: ["kms:ScheduleKeyDeletion"],
+            tag: ["kms:TagResource", "kms:UntagResource"],
+        },
+    },
+    {
+        terraformType: "aws_kms_alias",
+        service: "kms",
+        actions: {
+            read: ["kms:ListAliases"],
+            create: ["kms:CreateAlias"],
+            update: ["kms:UpdateAlias"],
+            delete: ["kms:DeleteAlias"],
+            tag: [],
+        },
+    },
+    {
+        terraformType: "aws_sns_topic",
+        service: "sns",
+        actions: {
+            read: ["sns:GetTopicAttributes", "sns:ListTagsForResource"],
+            create: ["sns:CreateTopic", "sns:SetTopicAttributes"],
+            update: ["sns:SetTopicAttributes"],
+            delete: ["sns:DeleteTopic"],
+            tag: ["sns:TagResource", "sns:UntagResource"],
+        },
+    },
+    {
+        terraformType: "aws_sns_topic_subscription",
+        service: "sns",
+        actions: {
+            read: ["sns:GetSubscriptionAttributes"],
+            create: ["sns:Subscribe"],
+            update: ["sns:SetSubscriptionAttributes"],
+            delete: ["sns:Unsubscribe"],
+            tag: [],
+        },
+    },
+    {
+        terraformType: "aws_sqs_queue",
+        service: "sqs",
+        actions: {
+            read: [
+                "sqs:GetQueueAttributes",
+                "sqs:GetQueueUrl",
+                "sqs:ListQueueTags",
+            ],
+            create: ["sqs:CreateQueue", "sqs:SetQueueAttributes"],
+            update: ["sqs:SetQueueAttributes"],
+            delete: ["sqs:DeleteQueue"],
+            tag: ["sqs:TagQueue", "sqs:UntagQueue"],
+        },
+    },
+    {
+        terraformType: "aws_cloudwatch_metric_alarm",
+        service: "cloudwatch",
+        actions: {
+            read: [
+                "cloudwatch:DescribeAlarms",
+                "cloudwatch:ListTagsForResource",
+            ],
+            create: ["cloudwatch:PutMetricAlarm"],
+            update: ["cloudwatch:PutMetricAlarm"],
+            delete: ["cloudwatch:DeleteAlarms"],
+            tag: ["cloudwatch:TagResource", "cloudwatch:UntagResource"],
+        },
+    },
 ] as const;
 
 export function createActionMappingDb(): ActionMappingDb {

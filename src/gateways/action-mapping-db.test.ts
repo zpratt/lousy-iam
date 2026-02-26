@@ -80,6 +80,113 @@ describe("ActionMappingDb", () => {
             expect(result).toBeDefined();
             expect(result?.service).toBe("ec2");
         });
+
+        it("should return the action mapping for aws_dynamodb_table", () => {
+            // Arrange
+            const db = createActionMappingDb();
+
+            // Act
+            const result = db.lookupByTerraformType("aws_dynamodb_table");
+
+            // Assert
+            expect(result).toBeDefined();
+            expect(result?.service).toBe("dynamodb");
+            expect(result?.actions.create).toContain("dynamodb:CreateTable");
+            expect(result?.actions.read.length).toBeGreaterThan(0);
+            expect(result?.actions.delete).toContain("dynamodb:DeleteTable");
+            expect(result?.actions.tag.length).toBeGreaterThan(0);
+        });
+
+        it("should return the action mapping for aws_kms_key", () => {
+            // Arrange
+            const db = createActionMappingDb();
+
+            // Act
+            const result = db.lookupByTerraformType("aws_kms_key");
+
+            // Assert
+            expect(result).toBeDefined();
+            expect(result?.service).toBe("kms");
+            expect(result?.actions.create).toContain("kms:CreateKey");
+            expect(result?.actions.read.length).toBeGreaterThan(0);
+        });
+
+        it("should return the action mapping for aws_kms_alias", () => {
+            // Arrange
+            const db = createActionMappingDb();
+
+            // Act
+            const result = db.lookupByTerraformType("aws_kms_alias");
+
+            // Assert
+            expect(result).toBeDefined();
+            expect(result?.service).toBe("kms");
+            expect(result?.actions.create).toContain("kms:CreateAlias");
+        });
+
+        it("should return the action mapping for aws_sns_topic", () => {
+            // Arrange
+            const db = createActionMappingDb();
+
+            // Act
+            const result = db.lookupByTerraformType("aws_sns_topic");
+
+            // Assert
+            expect(result).toBeDefined();
+            expect(result?.service).toBe("sns");
+            expect(result?.actions.create).toContain("sns:CreateTopic");
+            expect(result?.actions.delete).toContain("sns:DeleteTopic");
+            expect(result?.actions.tag.length).toBeGreaterThan(0);
+        });
+
+        it("should return the action mapping for aws_sns_topic_subscription", () => {
+            // Arrange
+            const db = createActionMappingDb();
+
+            // Act
+            const result = db.lookupByTerraformType(
+                "aws_sns_topic_subscription",
+            );
+
+            // Assert
+            expect(result).toBeDefined();
+            expect(result?.service).toBe("sns");
+            expect(result?.actions.create).toContain("sns:Subscribe");
+            expect(result?.actions.delete).toContain("sns:Unsubscribe");
+        });
+
+        it("should return the action mapping for aws_sqs_queue", () => {
+            // Arrange
+            const db = createActionMappingDb();
+
+            // Act
+            const result = db.lookupByTerraformType("aws_sqs_queue");
+
+            // Assert
+            expect(result).toBeDefined();
+            expect(result?.service).toBe("sqs");
+            expect(result?.actions.create).toContain("sqs:CreateQueue");
+            expect(result?.actions.delete).toContain("sqs:DeleteQueue");
+            expect(result?.actions.tag.length).toBeGreaterThan(0);
+        });
+
+        it("should return the action mapping for aws_cloudwatch_metric_alarm", () => {
+            // Arrange
+            const db = createActionMappingDb();
+
+            // Act
+            const result = db.lookupByTerraformType(
+                "aws_cloudwatch_metric_alarm",
+            );
+
+            // Assert
+            expect(result).toBeDefined();
+            expect(result?.service).toBe("cloudwatch");
+            expect(result?.actions.create).toContain(
+                "cloudwatch:PutMetricAlarm",
+            );
+            expect(result?.actions.delete).toContain("cloudwatch:DeleteAlarms");
+        });
     });
 
     describe("when looking up an unknown resource type", () => {
