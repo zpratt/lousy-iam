@@ -5,7 +5,7 @@ const GITHUB_REPO_REGEX =
     /^(?!\.)(?!.*\.\.)(?!.*\.$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const AWS_RESOURCE_PREFIX_REGEX = /^[A-Za-z0-9_${}][A-Za-z0-9_\-${}]*$/;
 const AWS_ACCOUNT_ID_REGEX = /^\d{12}$/;
-const AWS_REGION_REGEX = /^[a-z]{2}(-[a-z]+-\d+)$/;
+const AWS_REGION_REGEX = /^[a-z]{2}(-[a-z]+)+-\d+$/;
 
 export const FormulationConfigSchema = z.object({
     githubOrg: z
