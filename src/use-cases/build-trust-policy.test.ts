@@ -82,6 +82,40 @@ describe("BuildTrustPolicy", () => {
                 );
             });
 
+            it("should use aws-us-gov partition in placeholder when accountId is null and region is GovCloud", () => {
+                const config = buildConfig({
+                    accountId: null,
+                    region: "us-gov-west-1",
+                });
+
+                const result = builder.buildPlanTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toMatch(
+                    /^arn:aws-us-gov:iam::/,
+                );
+                expect(result.Statement[0]?.Principal.Federated).toContain(
+                    // biome-ignore lint/suspicious/noTemplateCurlyInString: testing IAM ARN placeholder
+                    "${account_id}",
+                );
+            });
+
+            it("should use aws-cn partition in placeholder when accountId is null and region is China", () => {
+                const config = buildConfig({
+                    accountId: null,
+                    region: "cn-north-1",
+                });
+
+                const result = builder.buildPlanTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toMatch(
+                    /^arn:aws-cn:iam::/,
+                );
+                expect(result.Statement[0]?.Principal.Federated).toContain(
+                    // biome-ignore lint/suspicious/noTemplateCurlyInString: testing IAM ARN placeholder
+                    "${account_id}",
+                );
+            });
+
             it("should use actual account ID in OIDC ARN when accountId is provided", () => {
                 const accountId = String(
                     chance.integer({ min: 100000000000, max: 999999999999 }),
@@ -322,6 +356,40 @@ describe("BuildTrustPolicy", () => {
 
                 const result = builder.buildApplyTrust(config);
 
+                expect(result.Statement[0]?.Principal.Federated).toContain(
+                    // biome-ignore lint/suspicious/noTemplateCurlyInString: testing IAM ARN placeholder
+                    "${account_id}",
+                );
+            });
+
+            it("should use aws-us-gov partition in placeholder when accountId is null and region is GovCloud", () => {
+                const config = buildConfig({
+                    accountId: null,
+                    region: "us-gov-west-1",
+                });
+
+                const result = builder.buildApplyTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toMatch(
+                    /^arn:aws-us-gov:iam::/,
+                );
+                expect(result.Statement[0]?.Principal.Federated).toContain(
+                    // biome-ignore lint/suspicious/noTemplateCurlyInString: testing IAM ARN placeholder
+                    "${account_id}",
+                );
+            });
+
+            it("should use aws-cn partition in placeholder when accountId is null and region is China", () => {
+                const config = buildConfig({
+                    accountId: null,
+                    region: "cn-north-1",
+                });
+
+                const result = builder.buildApplyTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toMatch(
+                    /^arn:aws-cn:iam::/,
+                );
                 expect(result.Statement[0]?.Principal.Federated).toContain(
                     // biome-ignore lint/suspicious/noTemplateCurlyInString: testing IAM ARN placeholder
                     "${account_id}",

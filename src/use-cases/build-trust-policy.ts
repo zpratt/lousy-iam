@@ -6,9 +6,9 @@ export interface TrustPolicyBuilder {
     buildApplyTrust(config: FormulationConfig): TrustPolicyDocument;
 }
 
-const OIDC_PROVIDER_ARN_TEMPLATE =
+const OIDC_ACCOUNT_ID_PLACEHOLDER =
     // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
-    "arn:aws:iam::${account_id}:oidc-provider/token.actions.githubusercontent.com";
+    "${account_id}";
 const OIDC_AUD_KEY = "token.actions.githubusercontent.com:aud";
 const OIDC_SUB_KEY = "token.actions.githubusercontent.com:sub";
 const AUDIENCE_VALUE = "sts.amazonaws.com";
@@ -28,10 +28,8 @@ function resolvePartition(region: string | null): string {
 
 function resolveOidcProviderArn(config: FormulationConfig): string {
     const partition = resolvePartition(config.region);
-    if (config.accountId) {
-        return `arn:${partition}:iam::${config.accountId}:oidc-provider/token.actions.githubusercontent.com`;
-    }
-    return OIDC_PROVIDER_ARN_TEMPLATE;
+    const accountId = config.accountId ?? OIDC_ACCOUNT_ID_PLACEHOLDER;
+    return `arn:${partition}:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`;
 }
 
 export function createTrustPolicyBuilder(): TrustPolicyBuilder {
