@@ -31,6 +31,8 @@ so that **generated trust policies contain the actual OIDC provider ARN instead 
 - Where `account_id` is not provided in the configuration, the `CLI` shall use the `${account_id}` template placeholder in trust policies.
 - If `account_id` is provided but is not a valid 12-digit AWS account ID, then the `CLI` shall display a validation error.
 - Where `account_id` is provided, the `CLI` shall display the actual account ID in the `template_variables` output section.
+- While `region` indicates a GovCloud region (starting with `us-gov-`), when `account_id` is provided, the `CLI` shall use the `aws-us-gov` partition in the OIDC provider ARN.
+- While `region` indicates a China region (starting with `cn-`), when `account_id` is provided, the `CLI` shall use the `aws-cn` partition in the OIDC provider ARN.
 
 ### Story 2: Provide region in Configuration
 
@@ -42,7 +44,21 @@ so that **generated policies reflect the target deployment region**.
 
 - Where `region` is provided in the configuration, the `CLI` shall record the actual region value in the `template_variables` output section.
 - Where `region` is not provided in the configuration, the `CLI` shall use the descriptive placeholder text in the `template_variables` output section.
-- If `region` is provided but is not a valid AWS region identifier, then the `CLI` shall display a validation error.
+- If `region` is provided but is not a valid AWS region identifier or `*`, then the `CLI` shall display a validation error.
+- Where `region` is `*`, the `CLI` shall accept it as a valid multi-region wildcard value.
+
+### Story 3: Interactive Configuration Prompt
+
+As a **platform engineer**,
+I want to **interactively generate a formulation configuration file via CLI prompts**,
+so that I can **quickly create a valid configuration without manually writing JSON**.
+
+#### Acceptance Criteria
+
+- When a user runs the configuration generation command, the `CLI` shall prompt for each required field (`github_org`, `github_repo`, `resource_prefix`).
+- When a user runs the configuration generation command, the `CLI` shall prompt for optional fields (`account_id`, `region`) with the ability to skip.
+- When all prompts are completed, the `CLI` shall output a valid JSON configuration file.
+- If a user provides an invalid value during prompting, then the `CLI` shall display a validation error and re-prompt.
 
 ---
 
@@ -111,8 +127,8 @@ sequenceDiagram
 ### Architecture Decisions
 
 1. **Optional fields with null defaults**: `accountId` and `region` default to `null`, preserving full backward compatibility. Existing configs without these fields continue to work identically.
-2. **Validation at schema boundary**: AWS account ID (12-digit) and region format validation happens in the Zod schema, keeping business logic in use cases clean.
-3. **Trust policy ARN resolution**: When `accountId` is provided, the trust policy builder substitutes it into the OIDC provider ARN. This is the only place where `account_id` directly affects policy content.
+2. **Validation at schema boundary**: AWS account ID (12-digit) and region format validation happens in the Zod schema, keeping business logic in use cases clean. The wildcard `*` is accepted for multi-region deployments.
+3. **Trust policy ARN resolution**: When `accountId` is provided, the trust policy builder substitutes it into the OIDC provider ARN. The partition (`aws`, `aws-us-gov`, `aws-cn`) is derived from the `region` field to produce valid ARNs for GovCloud and China regions.
 4. **Template variables as documentation**: The `template_variables` output section reflects actual values when provided, serving as a record of what was used during generation.
 
 ---
@@ -194,3 +210,24 @@ sequenceDiagram
 - [x] template_variables shows actual account_id when provided
 - [x] template_variables shows actual region when provided
 - [x] template_variables shows descriptive placeholders when values are null
+
+### Task 5: Interactive Configuration Prompt (Future)
+
+**Objective**: Add a CLI command that interactively prompts the user for configuration values and outputs a valid JSON configuration file.
+
+**Context**: Users currently need to manually write JSON config files. An interactive prompt reduces errors and improves onboarding. This task is scoped for a future PR.
+
+**Affected files**:
+- `src/commands/init-config.ts` (new)
+- `src/commands/init-config.test.ts` (new)
+- `src/index.ts` (modified — register new subcommand)
+
+**Requirements**: Covers Story 3 acceptance criteria.
+
+**Verification**:
+- [ ] `npm test` passes
+- [ ] `npx biome check` passes
+- [ ] `npm run build` passes
+- [ ] Interactive prompt collects required fields
+- [ ] Interactive prompt collects optional fields with skip option
+- [ ] Output is valid JSON matching FormulationConfigSchema

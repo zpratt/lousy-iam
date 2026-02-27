@@ -13,9 +13,23 @@ const OIDC_AUD_KEY = "token.actions.githubusercontent.com:aud";
 const OIDC_SUB_KEY = "token.actions.githubusercontent.com:sub";
 const AUDIENCE_VALUE = "sts.amazonaws.com";
 
+function resolvePartition(region: string | null): string {
+    if (!region) {
+        return "aws";
+    }
+    if (region.startsWith("us-gov-")) {
+        return "aws-us-gov";
+    }
+    if (region.startsWith("cn-")) {
+        return "aws-cn";
+    }
+    return "aws";
+}
+
 function resolveOidcProviderArn(config: FormulationConfig): string {
+    const partition = resolvePartition(config.region);
     if (config.accountId) {
-        return `arn:aws:iam::${config.accountId}:oidc-provider/token.actions.githubusercontent.com`;
+        return `arn:${partition}:iam::${config.accountId}:oidc-provider/token.actions.githubusercontent.com`;
     }
     return OIDC_PROVIDER_ARN_TEMPLATE;
 }

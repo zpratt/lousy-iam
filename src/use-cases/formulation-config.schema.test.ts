@@ -320,6 +320,19 @@ describe("FormulationConfigSchema", () => {
 
             expect(result.region).toBe("ap-southeast-1");
         });
+
+        it("should accept wildcard * for multi-region", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                region: "*",
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.region).toBe("*");
+        });
     });
 
     describe("given a config with an invalid region", () => {

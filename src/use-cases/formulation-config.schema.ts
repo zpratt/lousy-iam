@@ -38,11 +38,15 @@ export const FormulationConfigSchema = z.object({
         .nullable()
         .default(null),
     region: z
-        .string()
-        .regex(
-            AWS_REGION_REGEX,
-            "region must be a valid AWS region identifier (e.g. us-east-1)",
-        )
+        .union([
+            z.literal("*"),
+            z
+                .string()
+                .regex(
+                    AWS_REGION_REGEX,
+                    "region must be a valid AWS region identifier (e.g. us-east-1) or * for multi-region",
+                ),
+        ])
         .nullable()
         .default(null),
     planApplySeparation: z.boolean().default(true),

@@ -95,6 +95,67 @@ describe("BuildTrustPolicy", () => {
                 );
             });
 
+            it("should use aws-us-gov partition for GovCloud regions", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({
+                    accountId,
+                    region: "us-gov-west-1",
+                });
+
+                const result = builder.buildPlanTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws-us-gov:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+                );
+            });
+
+            it("should use aws-cn partition for China regions", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({
+                    accountId,
+                    region: "cn-north-1",
+                });
+
+                const result = builder.buildPlanTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws-cn:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+                );
+            });
+
+            it("should use aws partition for standard regions", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({
+                    accountId,
+                    region: "us-east-1",
+                });
+
+                const result = builder.buildPlanTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+                );
+            });
+
+            it("should use aws partition when region is null", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({ accountId, region: null });
+
+                const result = builder.buildPlanTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+                );
+            });
+
             it("should use Version 2012-10-17", () => {
                 const config = buildConfig();
 
@@ -208,6 +269,38 @@ describe("BuildTrustPolicy", () => {
 
                 expect(result.Statement[0]?.Principal.Federated).toBe(
                     `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+                );
+            });
+
+            it("should use aws-us-gov partition for GovCloud regions", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({
+                    accountId,
+                    region: "us-gov-west-1",
+                });
+
+                const result = builder.buildApplyTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws-us-gov:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+                );
+            });
+
+            it("should use aws-cn partition for China regions", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({
+                    accountId,
+                    region: "cn-north-1",
+                });
+
+                const result = builder.buildApplyTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws-cn:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
                 );
             });
 
