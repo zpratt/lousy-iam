@@ -14,7 +14,7 @@ const OIDC_SUB_KEY = "token.actions.githubusercontent.com:sub";
 const AUDIENCE_VALUE = "sts.amazonaws.com";
 
 function resolvePartition(region: string | null): string {
-    if (!region) {
+    if (!region || region === "*") {
         return "aws";
     }
     if (region.startsWith("us-gov-")) {

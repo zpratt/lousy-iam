@@ -156,6 +156,19 @@ describe("BuildTrustPolicy", () => {
                 );
             });
 
+            it("should use aws partition when region is wildcard *", () => {
+                const accountId = String(
+                    chance.integer({ min: 100000000000, max: 999999999999 }),
+                );
+                const config = buildConfig({ accountId, region: "*" });
+
+                const result = builder.buildPlanTrust(config);
+
+                expect(result.Statement[0]?.Principal.Federated).toBe(
+                    `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+                );
+            });
+
             it("should use Version 2012-10-17", () => {
                 const config = buildConfig();
 
