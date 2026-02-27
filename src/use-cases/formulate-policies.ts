@@ -70,8 +70,8 @@ export function createPolicyFormulator(
             });
 
             const templateVariables: Record<string, string> = {
-                account_id: "Target AWS account ID",
-                region: "Target region or * for multi-region",
+                account_id: config.accountId ?? "Target AWS account ID",
+                region: config.region ?? "Target region or * for multi-region",
                 resource_prefix: config.resourcePrefix,
                 org: config.githubOrg,
                 repo: config.githubRepo,

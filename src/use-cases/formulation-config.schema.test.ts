@@ -18,6 +18,8 @@ describe("FormulationConfigSchema", () => {
             expect(result.githubOrg).toBe(input.githubOrg);
             expect(result.githubRepo).toBe(input.githubRepo);
             expect(result.resourcePrefix).toBe(input.resourcePrefix);
+            expect(result.accountId).toBeNull();
+            expect(result.region).toBeNull();
             expect(result.planApplySeparation).toBe(true);
             expect(result.includeDeleteActions).toBe(true);
             expect(result.useGithubEnvironments).toBe(false);
@@ -212,6 +214,134 @@ describe("FormulationConfigSchema", () => {
                 githubRepo: chance.word(),
                 resourcePrefix: chance.word(),
                 maxSessionDuration: 50000,
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe("given a config with a valid account_id", () => {
+        it("should accept a 12-digit AWS account ID", () => {
+            const accountId = String(
+                chance.integer({ min: 100000000000, max: 999999999999 }),
+            );
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                accountId,
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.accountId).toBe(accountId);
+        });
+    });
+
+    describe("given a config with an invalid account_id", () => {
+        it("should reject account IDs shorter than 12 digits", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                accountId: "12345",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject account IDs longer than 12 digits", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                accountId: "1234567890123",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject account IDs with non-digit characters", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                accountId: "12345678901a",
+            };
+
+            const result = FormulationConfigSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe("given a config with a valid region", () => {
+        it("should accept a standard AWS region", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                region: "us-east-1",
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.region).toBe("us-east-1");
+        });
+
+        it("should accept a GovCloud region", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                region: "us-gov-west-1",
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.region).toBe("us-gov-west-1");
+        });
+
+        it("should accept a multi-character middle segment region", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                region: "ap-southeast-1",
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.region).toBe("ap-southeast-1");
+        });
+
+        it("should accept wildcard * for multi-region", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                region: "*",
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.region).toBe("*");
+        });
+    });
+
+    describe("given a config with an invalid region", () => {
+        it("should reject regions with invalid format", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                region: "not a region!",
             };
 
             const result = FormulationConfigSchema.safeParse(input);

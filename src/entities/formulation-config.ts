@@ -2,6 +2,8 @@ export interface FormulationConfig {
     readonly githubOrg: string;
     readonly githubRepo: string;
     readonly resourcePrefix: string;
+    readonly accountId: string | null;
+    readonly region: string | null;
     readonly planApplySeparation: boolean;
     readonly includeDeleteActions: boolean;
     readonly useGithubEnvironments: boolean;

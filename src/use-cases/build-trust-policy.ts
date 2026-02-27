@@ -6,17 +6,37 @@ export interface TrustPolicyBuilder {
     buildApplyTrust(config: FormulationConfig): TrustPolicyDocument;
 }
 
-const OIDC_PROVIDER_ARN =
+const OIDC_ACCOUNT_ID_PLACEHOLDER =
     // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for user substitution
-    "arn:aws:iam::${account_id}:oidc-provider/token.actions.githubusercontent.com";
+    "${account_id}";
 const OIDC_AUD_KEY = "token.actions.githubusercontent.com:aud";
 const OIDC_SUB_KEY = "token.actions.githubusercontent.com:sub";
 const AUDIENCE_VALUE = "sts.amazonaws.com";
+
+function resolvePartition(region: string | null): string {
+    if (!region || region === "*") {
+        return "aws";
+    }
+    if (region.startsWith("us-gov-")) {
+        return "aws-us-gov";
+    }
+    if (region.startsWith("cn-")) {
+        return "aws-cn";
+    }
+    return "aws";
+}
+
+function resolveOidcProviderArn(config: FormulationConfig): string {
+    const partition = resolvePartition(config.region);
+    const accountId = config.accountId ?? OIDC_ACCOUNT_ID_PLACEHOLDER;
+    return `arn:${partition}:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`;
+}
 
 export function createTrustPolicyBuilder(): TrustPolicyBuilder {
     return {
         buildPlanTrust(config: FormulationConfig): TrustPolicyDocument {
             const subject = `repo:${config.githubOrg}/${config.githubRepo}:pull_request`;
+            const providerArn = resolveOidcProviderArn(config);
 
             return {
                 Version: "2012-10-17",
@@ -25,7 +45,7 @@ export function createTrustPolicyBuilder(): TrustPolicyBuilder {
                         Sid: "AllowGitHubOIDCPlanOnPR",
                         Effect: "Allow",
                         Principal: {
-                            Federated: OIDC_PROVIDER_ARN,
+                            Federated: providerArn,
                         },
                         Action: "sts:AssumeRoleWithWebIdentity",
                         Condition: {
@@ -54,6 +74,8 @@ export function createTrustPolicyBuilder(): TrustPolicyBuilder {
                 subject = `repo:${config.githubOrg}/${config.githubRepo}:ref:refs/heads/main`;
             }
 
+            const providerArn = resolveOidcProviderArn(config);
+
             return {
                 Version: "2012-10-17",
                 Statement: [
@@ -61,7 +83,7 @@ export function createTrustPolicyBuilder(): TrustPolicyBuilder {
                         Sid: "AllowGitHubOIDC",
                         Effect: "Allow",
                         Principal: {
-                            Federated: OIDC_PROVIDER_ARN,
+                            Federated: providerArn,
                         },
                         Action: "sts:AssumeRoleWithWebIdentity",
                         Condition: {
