@@ -36,7 +36,10 @@ flowchart TD
     A[Terraform plan JSON] --> B[analyze\nPhase 1: maps every resource change\nto its required IAM actions]
     B -->|action inventory JSON| C[formulate\nPhase 2: builds trust + permission\npolicy documents for two OIDC roles]
     C -->|roles JSON| D[validate\nPhase 3: checks policies against\n33 least-privilege rules and auto-fixes]
-    D -->|validated JSON| E[Provisioning pipeline\nTerraform / CDK / CloudFormation\ncreates the IAM roles in AWS]
+    C -->|roles JSON| E[Provisioning pipeline\nTerraform / CDK / CloudFormation\ncreates the IAM roles in AWS]
+    D -->|validation results JSON| F{Gate: validation passed?}
+    F -->|yes| E
+    F -->|no| G[Stop: fix policy issues\nand re-run validate]
 ```
 
 1. **[analyze](./analyze-command.md)** reads `terraform show -json` output, looks up each resource type in the [action mapping database](./action-mapping-database.md), and emits a structured action inventory JSON. Actions are split into `plan_and_apply` (read-only, both roles need them) and `apply_only` (write operations, apply role only).

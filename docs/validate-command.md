@@ -37,11 +37,13 @@ Each role's trust and permission policies are validated against 33 rules across 
 
 ### 3. Auto-Fix and Re-Validate
 
-When auto-fixable violations are found, the command applies deterministic fixes and re-validates — up to 5 iterations. This resolves common issues (missing `Version` field, duplicate actions, missing conditions) without manual intervention.
+When auto-fixable violations are found, the command applies deterministic fixes in-memory and re-validates — up to 5 iterations. This resolves common issues (missing `Version` field, duplicate actions, missing conditions) without manual intervention and affects the reported `valid` flag, `fix_iterations`, and violation details.
+
+Note: the `validate` command does not write back updated roles or policy documents to disk and does not emit a separate "fixed" policy artifact; auto-fixes exist only within the validation run to produce the final `ValidationOutput`.
 
 ## Output Format
 
-The validate command outputs JSON with validation results:
+The validate command outputs JSON with validation results only:
 
 ```json
 {
@@ -141,7 +143,7 @@ The validate command outputs JSON with validation results:
 |------|----------|-------------|
 | LP-010 | Error | `Resource: "*"` on actions that support resource-level permissions |
 | LP-011 | Warning | `Resource: "*"` on unscoped actions (encourages adding conditions) |
-| LP-012 | Error | Hardcoded AWS account ID in resource ARN |
+| LP-012 | Error | Hardcoded AWS account ID in standard-partition resource ARN (`arn:aws:`) |
 | LP-013 | Warning | ARN with only `*` in resource segment and no conditions |
 
 ### Condition Requirement Rules
