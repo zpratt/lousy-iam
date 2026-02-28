@@ -24,6 +24,80 @@ const WRITE_CATEGORIES: ReadonlySet<ActionCategory> = new Set([
     "tag",
 ]);
 
+function buildActionEntry(
+    action: string,
+    resourceArn: string,
+    category: ActionCategory,
+    resourceChange: ResourceChange,
+): InfrastructureActionEntry {
+    return {
+        action,
+        resource: resourceArn,
+        purpose: `${category} for ${resourceChange.type}`,
+        sourceResource: [resourceChange.address],
+        planAction: resourceChange.change.actions,
+        category,
+    };
+}
+
+interface ClassificationContext {
+    readonly planAndApply: InfrastructureActionEntry[];
+    readonly applyOnly: InfrastructureActionEntry[];
+    readonly seenPlanAndApply: Set<string>;
+    readonly seenApplyOnly: Set<string>;
+}
+
+function classifyAction(
+    action: string,
+    resourceArn: string,
+    category: ActionCategory,
+    resourceChange: ResourceChange,
+    ctx: ClassificationContext,
+): void {
+    const dedupeKey = `${action}|${resourceArn}`;
+
+    if (READ_CATEGORIES.has(category) && !ctx.seenPlanAndApply.has(dedupeKey)) {
+        ctx.planAndApply.push(
+            buildActionEntry(action, resourceArn, category, resourceChange),
+        );
+        ctx.seenPlanAndApply.add(dedupeKey);
+    } else if (
+        WRITE_CATEGORIES.has(category) &&
+        !ctx.seenApplyOnly.has(dedupeKey)
+    ) {
+        ctx.applyOnly.push(
+            buildActionEntry(action, resourceArn, category, resourceChange),
+        );
+        ctx.seenApplyOnly.add(dedupeKey);
+    }
+}
+
+function classifyActions(
+    entry: { readonly actions: Record<ActionCategory, readonly string[]> },
+    categories: readonly ActionCategory[],
+    resourceChange: ResourceChange,
+): MappedResourceActions {
+    const ctx: ClassificationContext = {
+        planAndApply: [],
+        applyOnly: [],
+        seenPlanAndApply: new Set<string>(),
+        seenApplyOnly: new Set<string>(),
+    };
+
+    for (const category of categories) {
+        const actions = entry.actions[category];
+        for (const action of actions) {
+            classifyAction(action, "*", category, resourceChange, ctx);
+        }
+    }
+
+    return {
+        planAndApply: ctx.planAndApply,
+        applyOnly: ctx.applyOnly,
+        unknownType: false,
+    };
+}
+
 export function createResourceActionMapper(
     db: ActionMappingDb,
 ): ResourceActionMapper {
@@ -40,52 +114,7 @@ export function createResourceActionMapper(
             }
 
             const categories = categorizeActions(resourceChange.change.actions);
-
-            const planAndApply: InfrastructureActionEntry[] = [];
-            const applyOnly: InfrastructureActionEntry[] = [];
-            const seenPlanAndApply = new Set<string>();
-            const seenApplyOnly = new Set<string>();
-
-            const planActions = resourceChange.change.actions;
-
-            for (const category of categories) {
-                const actions = entry.actions[category];
-
-                for (const action of actions) {
-                    // Phase 1: resource ARN is always "*" (wildcard). Resource-level
-                    // ARN scoping is deferred to a future phase.
-                    const resourceArn = "*";
-                    const dedupeKey = `${action}|${resourceArn}`;
-
-                    if (READ_CATEGORIES.has(category)) {
-                        if (!seenPlanAndApply.has(dedupeKey)) {
-                            planAndApply.push({
-                                action,
-                                resource: resourceArn,
-                                purpose: `${category} for ${resourceChange.type}`,
-                                sourceResource: [resourceChange.address],
-                                planAction: planActions,
-                                category,
-                            });
-                            seenPlanAndApply.add(dedupeKey);
-                        }
-                    } else if (WRITE_CATEGORIES.has(category)) {
-                        if (!seenApplyOnly.has(dedupeKey)) {
-                            applyOnly.push({
-                                action,
-                                resource: resourceArn,
-                                purpose: `${category} for ${resourceChange.type}`,
-                                sourceResource: [resourceChange.address],
-                                planAction: planActions,
-                                category,
-                            });
-                            seenApplyOnly.add(dedupeKey);
-                        }
-                    }
-                }
-            }
-
-            return { planAndApply, applyOnly, unknownType: false };
+            return classifyActions(entry, categories, resourceChange);
         },
     };
 }

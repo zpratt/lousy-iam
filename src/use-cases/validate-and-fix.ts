@@ -70,6 +70,113 @@ function deepCopy<T>(obj: T): T {
     return structuredClone(obj);
 }
 
+type PermissionPolicyInput =
+    FormulationOutputInput["roles"][number]["permission_policies"][number];
+
+function runPermissionFixLoop(
+    deps: ValidateAndFixDeps,
+    permPolicy: PermissionPolicyInput,
+    roleName: string,
+): { result: PolicyValidationResult; iterations: number } {
+    let currentDoc = deepCopy(permPolicy.policy_document);
+    let violations: readonly ValidationViolation[] = [];
+    let previousFingerprint = "";
+    let iterations = 0;
+
+    for (iterations = 0; iterations < DEFAULT_MAX_ITERATIONS; iterations++) {
+        violations = deps.permissionValidator.validate(currentDoc, {
+            unscopedActions: deps.unscopedActions,
+            roleName,
+        });
+
+        const autoFixable = violations.filter((v) => v.auto_fixable);
+        if (autoFixable.length === 0) {
+            break;
+        }
+
+        const fingerprint = violationsFingerprint(violations);
+        if (fingerprint === previousFingerprint) {
+            break;
+        }
+        previousFingerprint = fingerprint;
+
+        currentDoc = deepCopy(
+            deps.fixer.fixPermissionPolicy(currentDoc, violations),
+        );
+    }
+
+    const totalActions = currentDoc.Statement.reduce(
+        (sum, s) => sum + s.Action.length,
+        0,
+    );
+
+    return {
+        result: {
+            policy_name: permPolicy.policy_name,
+            policy_type: "permission",
+            valid: violations.every((v) => v.severity !== "error"),
+            violations,
+            stats: computeStats(
+                violations,
+                currentDoc.Statement.length,
+                totalActions,
+            ),
+        },
+        iterations,
+    };
+}
+
+type TrustPolicyInput = FormulationOutputInput["roles"][number]["trust_policy"];
+
+function runTrustFixLoop(
+    deps: ValidateAndFixDeps,
+    trustPolicy: TrustPolicyInput,
+    roleType: RoleType,
+): { result: PolicyValidationResult; iterations: number } {
+    let trustDoc = deepCopy(trustPolicy);
+    let trustViolations: readonly ValidationViolation[] = [];
+    let previousTrustFingerprint = "";
+    let trustIterations = 0;
+
+    for (
+        trustIterations = 0;
+        trustIterations < DEFAULT_MAX_ITERATIONS;
+        trustIterations++
+    ) {
+        trustViolations = deps.trustValidator.validate(trustDoc, roleType);
+
+        const autoFixable = trustViolations.filter((v) => v.auto_fixable);
+        if (autoFixable.length === 0) {
+            break;
+        }
+
+        const fingerprint = violationsFingerprint(trustViolations);
+        if (fingerprint === previousTrustFingerprint) {
+            break;
+        }
+        previousTrustFingerprint = fingerprint;
+
+        trustDoc = deepCopy(
+            deps.fixer.fixTrustPolicy(trustDoc, trustViolations),
+        );
+    }
+
+    return {
+        result: {
+            policy_name: "",
+            policy_type: "trust",
+            valid: trustViolations.every((v) => v.severity !== "error"),
+            violations: trustViolations,
+            stats: computeStats(
+                trustViolations,
+                trustDoc.Statement.length,
+                trustDoc.Statement.length,
+            ),
+        },
+        iterations: trustIterations,
+    };
+}
+
 export function createValidateAndFixOrchestrator(
     deps: ValidateAndFixDeps,
 ): ValidateAndFixOrchestrator {
@@ -83,113 +190,24 @@ export function createValidateAndFixOrchestrator(
                 const policyResults: PolicyValidationResult[] = [];
 
                 for (const permPolicy of role.permission_policies) {
-                    let currentDoc = deepCopy(permPolicy.policy_document);
-                    let violations: readonly ValidationViolation[] = [];
-                    let iterations = 0;
-                    let previousFingerprint = "";
-
-                    for (
-                        iterations = 0;
-                        iterations < DEFAULT_MAX_ITERATIONS;
-                        iterations++
-                    ) {
-                        violations = deps.permissionValidator.validate(
-                            currentDoc,
-                            {
-                                unscopedActions: deps.unscopedActions,
-                                roleName: role.role_name,
-                            },
-                        );
-
-                        const autoFixable = violations.filter(
-                            (v) => v.auto_fixable,
-                        );
-                        if (autoFixable.length === 0) {
-                            break;
-                        }
-
-                        const fingerprint = violationsFingerprint(violations);
-                        if (fingerprint === previousFingerprint) {
-                            break;
-                        }
-                        previousFingerprint = fingerprint;
-
-                        currentDoc = deepCopy(
-                            deps.fixer.fixPermissionPolicy(
-                                currentDoc,
-                                violations,
-                            ),
-                        );
-                    }
-
+                    const { result, iterations } = runPermissionFixLoop(
+                        deps,
+                        permPolicy,
+                        role.role_name,
+                    );
+                    policyResults.push(result);
                     totalIterations = Math.max(totalIterations, iterations);
-
-                    const totalActions = currentDoc.Statement.reduce(
-                        (sum, s) => sum + s.Action.length,
-                        0,
-                    );
-
-                    policyResults.push({
-                        policy_name: permPolicy.policy_name,
-                        policy_type: "permission",
-                        valid: violations.every((v) => v.severity !== "error"),
-                        violations,
-                        stats: computeStats(
-                            violations,
-                            currentDoc.Statement.length,
-                            totalActions,
-                        ),
-                    });
                 }
 
-                let trustDoc = deepCopy(role.trust_policy);
-                let trustViolations: readonly ValidationViolation[] = [];
-                let trustIterations = 0;
-                let previousTrustFingerprint = "";
-
-                for (
-                    trustIterations = 0;
-                    trustIterations < DEFAULT_MAX_ITERATIONS;
-                    trustIterations++
-                ) {
-                    trustViolations = deps.trustValidator.validate(
-                        trustDoc,
-                        roleType,
-                    );
-
-                    const autoFixable = trustViolations.filter(
-                        (v) => v.auto_fixable,
-                    );
-                    if (autoFixable.length === 0) {
-                        break;
-                    }
-
-                    const fingerprint = violationsFingerprint(trustViolations);
-                    if (fingerprint === previousTrustFingerprint) {
-                        break;
-                    }
-                    previousTrustFingerprint = fingerprint;
-
-                    trustDoc = deepCopy(
-                        deps.fixer.fixTrustPolicy(trustDoc, trustViolations),
-                    );
-                }
-
-                totalIterations = Math.max(totalIterations, trustIterations);
-
-                const trustActions = trustDoc.Statement.length;
+                const { result: trustResult, iterations: trustIter } =
+                    runTrustFixLoop(deps, role.trust_policy, roleType);
 
                 policyResults.push({
+                    ...trustResult,
                     policy_name: `${role.role_name}-trust`,
-                    policy_type: "trust",
-                    valid: trustViolations.every((v) => v.severity !== "error"),
-                    violations: trustViolations,
-                    stats: computeStats(
-                        trustViolations,
-                        trustDoc.Statement.length,
-                        trustActions,
-                    ),
                 });
+
+                totalIterations = Math.max(totalIterations, trustIter);
 
                 const roleValid = policyResults.every((p) => p.valid);
 
