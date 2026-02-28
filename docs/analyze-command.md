@@ -145,3 +145,10 @@ Unknown resource type: aws_sqs_queue (module.messaging.aws_sqs_queue.events) —
 ```
 
 The resource is skipped in the output. See [Action Mapping Database](./action-mapping-database.md) for the list of supported types and how to extend it.
+
+## See Also
+
+- [Getting Started](./getting-started.md) — End-to-end workflow
+- [Formulate Command](./formulate-command.md) — Phase 2 policy generation
+- [Validate Command](./validate-command.md) — Phase 3 policy validation
+- [Action Mapping Database](./action-mapping-database.md) — How resource-to-IAM-action mapping works

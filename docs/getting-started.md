@@ -84,7 +84,23 @@ lousy-iam formulate --input action-inventory.json --config formulation-config.js
 
 The output contains role definitions for a plan role (read-only, scoped to pull requests) and an apply role (full CRUD, scoped to merges to main). See [Formulate Command](./formulate-command.md) for details.
 
-### Step 5: Submit to Your Provisioning Pipeline
+### Step 5: Validate the Generated Policies
+
+Run the `validate` command to check the generated policies against least-privilege security rules:
+
+```bash
+lousy-iam validate --input roles.json
+```
+
+This validates the policies against 33 security rules, automatically fixes deterministic violations, and outputs structured validation results. Save the output:
+
+```bash
+lousy-iam validate --input roles.json > validation-results.json
+```
+
+Review the results to ensure `valid` is `true`. If violations remain, the output includes rule IDs, severity levels, and fix hints. See [Validate Command](./validate-command.md) for details.
+
+### Step 6: Submit to Your Provisioning Pipeline
 
 Submit the `roles.json` output to your IAM provisioning pipeline. The JSON contains template variables (such as `${account_id}` and `${region}`) that your pipeline resolves at creation time.
 
@@ -92,6 +108,7 @@ Submit the `roles.json` output to your IAM provisioning pipeline. The JSON conta
 
 - [Analyze Command](./analyze-command.md) — Full reference for the analyze phase
 - [Formulate Command](./formulate-command.md) — Full reference for the formulate phase
+- [Validate Command](./validate-command.md) — Full reference for the validate phase
 - [Configuration Reference](./configuration.md) — All formulation config options
 - [Action Mapping Database](./action-mapping-database.md) — How resource-to-IAM-action mapping works
 
@@ -125,6 +142,9 @@ EOF
 # 4. Generate IAM policy documents
 lousy-iam formulate --input action-inventory.json --config formulation-config.json > roles.json
 
-# 5. Review and submit to provisioning pipeline
+# 5. Validate policies against least-privilege rules
+lousy-iam validate --input roles.json > validation-results.json
+
+# 6. Review and submit to provisioning pipeline
 cat roles.json
 ```

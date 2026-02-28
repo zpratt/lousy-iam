@@ -142,6 +142,18 @@ By default, the apply role trust policy scopes to the `main` branch:
 "token.actions.githubusercontent.com:sub": "repo:my-org/infra-repo:ref:refs/heads/main"
 ```
 
+### AWS Partition Resolution
+
+When `account_id` is provided in the configuration, the OIDC provider ARN uses the actual account ID instead of `${account_id}`. The AWS partition is automatically derived from the `region` configuration:
+
+| Region | Partition | OIDC ARN Example |
+|--------|-----------|-----------------|
+| Standard (e.g., `us-east-1`) | `aws` | `arn:aws:iam::123456789012:oidc-provider/...` |
+| GovCloud (e.g., `us-gov-west-1`) | `aws-us-gov` | `arn:aws-us-gov:iam::123456789012:oidc-provider/...` |
+| China (e.g., `cn-north-1`) | `aws-cn` | `arn:aws-cn:iam::123456789012:oidc-provider/...` |
+
+When `account_id` is not provided, the `${account_id}` template placeholder is used instead.
+
 ### Plan Role Trust
 
 The plan role trust policy scopes to pull request events:
@@ -176,4 +188,5 @@ When `include_delete_actions` is `false`, delete-category actions are excluded f
 
 - [Getting Started](./getting-started.md) — End-to-end workflow
 - [Configuration Reference](./configuration.md) — All configuration options
+- [Validate Command](./validate-command.md) — Phase 3 policy validation
 - [Analyze Command](./analyze-command.md) — Phase 1 action inventory generation
