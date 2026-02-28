@@ -40,31 +40,35 @@ function buildActionEntry(
     };
 }
 
+interface ClassificationContext {
+    readonly planAndApply: InfrastructureActionEntry[];
+    readonly applyOnly: InfrastructureActionEntry[];
+    readonly seenPlanAndApply: Set<string>;
+    readonly seenApplyOnly: Set<string>;
+}
+
 function classifyAction(
     action: string,
     resourceArn: string,
     category: ActionCategory,
     resourceChange: ResourceChange,
-    planAndApply: InfrastructureActionEntry[],
-    applyOnly: InfrastructureActionEntry[],
-    seenPlanAndApply: Set<string>,
-    seenApplyOnly: Set<string>,
+    ctx: ClassificationContext,
 ): void {
     const dedupeKey = `${action}|${resourceArn}`;
 
-    if (READ_CATEGORIES.has(category) && !seenPlanAndApply.has(dedupeKey)) {
-        planAndApply.push(
+    if (READ_CATEGORIES.has(category) && !ctx.seenPlanAndApply.has(dedupeKey)) {
+        ctx.planAndApply.push(
             buildActionEntry(action, resourceArn, category, resourceChange),
         );
-        seenPlanAndApply.add(dedupeKey);
+        ctx.seenPlanAndApply.add(dedupeKey);
     } else if (
         WRITE_CATEGORIES.has(category) &&
-        !seenApplyOnly.has(dedupeKey)
+        !ctx.seenApplyOnly.has(dedupeKey)
     ) {
-        applyOnly.push(
+        ctx.applyOnly.push(
             buildActionEntry(action, resourceArn, category, resourceChange),
         );
-        seenApplyOnly.add(dedupeKey);
+        ctx.seenApplyOnly.add(dedupeKey);
     }
 }
 
@@ -73,28 +77,25 @@ function classifyActions(
     categories: readonly ActionCategory[],
     resourceChange: ResourceChange,
 ): MappedResourceActions {
-    const planAndApply: InfrastructureActionEntry[] = [];
-    const applyOnly: InfrastructureActionEntry[] = [];
-    const seenPlanAndApply = new Set<string>();
-    const seenApplyOnly = new Set<string>();
+    const ctx: ClassificationContext = {
+        planAndApply: [],
+        applyOnly: [],
+        seenPlanAndApply: new Set<string>(),
+        seenApplyOnly: new Set<string>(),
+    };
 
     for (const category of categories) {
         const actions = entry.actions[category];
         for (const action of actions) {
-            classifyAction(
-                action,
-                "*",
-                category,
-                resourceChange,
-                planAndApply,
-                applyOnly,
-                seenPlanAndApply,
-                seenApplyOnly,
-            );
+            classifyAction(action, "*", category, resourceChange, ctx);
         }
     }
 
-    return { planAndApply, applyOnly, unknownType: false };
+    return {
+        planAndApply: ctx.planAndApply,
+        applyOnly: ctx.applyOnly,
+        unknownType: false,
+    };
 }
 
 export function createResourceActionMapper(

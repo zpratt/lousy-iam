@@ -101,11 +101,14 @@ function fixVersion(): string {
     return "2012-10-17";
 }
 
-function fixMissingSid(statements: PolicyStatement[], index: number): void {
-    const stmt = statements[index];
-    if (!stmt) {
+function fixMissingSid(
+    statements: PolicyStatement[],
+    index: number | undefined,
+): void {
+    if (index === undefined || !statements[index]) {
         return;
     }
+    const stmt = statements[index];
     const service = extractServicePrefix(stmt.Action[0] ?? "Unknown");
     statements[index] = {
         ...stmt,
@@ -115,12 +118,12 @@ function fixMissingSid(statements: PolicyStatement[], index: number): void {
 
 function fixDuplicateActions(
     statements: PolicyStatement[],
-    index: number,
+    index: number | undefined,
 ): void {
-    const stmt = statements[index];
-    if (!stmt) {
+    if (index === undefined || !statements[index]) {
         return;
     }
+    const stmt = statements[index];
     statements[index] = {
         ...stmt,
         Action: [...new Set(stmt.Action)],
@@ -219,10 +222,10 @@ function applyPermissionFix(
         case "LP-040":
             return fixVersion();
         case "LP-041":
-            fixMissingSid(statements, index ?? -1);
+            fixMissingSid(statements, index);
             return undefined;
         case "LP-045":
-            fixDuplicateActions(statements, index ?? -1);
+            fixDuplicateActions(statements, index);
             return undefined;
         case "LP-046":
             fixCrossStatementDuplicates(statements, violation);

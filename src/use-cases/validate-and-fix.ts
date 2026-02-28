@@ -70,10 +70,8 @@ function deepCopy<T>(obj: T): T {
     return structuredClone(obj);
 }
 
-interface PermissionPolicyInput {
-    readonly policy_name: string;
-    readonly policy_document: FormulationOutputInput["roles"][number]["permission_policies"][number]["policy_document"];
-}
+type PermissionPolicyInput =
+    FormulationOutputInput["roles"][number]["permission_policies"][number];
 
 function runPermissionFixLoop(
     deps: ValidateAndFixDeps,
@@ -134,7 +132,7 @@ function runTrustFixLoop(
     deps: ValidateAndFixDeps,
     trustPolicy: TrustPolicyInput,
     roleType: RoleType,
-): { result: PolicyValidationResult; iterations: number; roleName: string } {
+): { result: PolicyValidationResult; iterations: number } {
     let trustDoc = deepCopy(trustPolicy);
     let trustViolations: readonly ValidationViolation[] = [];
     let previousTrustFingerprint = "";
@@ -176,7 +174,6 @@ function runTrustFixLoop(
             ),
         },
         iterations: trustIterations,
-        roleName: "",
     };
 }
 

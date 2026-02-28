@@ -236,7 +236,7 @@ function validateSubjectRoleType(
     }
 }
 
-function checkStringLikeEntry(
+function validateStringLikeEntry(
     key: string,
     value: string | readonly string[],
     operator: string,
@@ -281,7 +281,7 @@ function validateStringLikeUsage(
             continue;
         }
         for (const [key, value] of Object.entries(conditionBlock)) {
-            checkStringLikeEntry(
+            validateStringLikeEntry(
                 key,
                 value,
                 operator,
