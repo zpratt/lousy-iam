@@ -213,6 +213,16 @@ function validatePolicyStructure(
         });
     }
 
+    validatePolicySize(document, violations);
+    validateDuplicateActionsAcrossStatements(document, violations);
+
+    return violations;
+}
+
+function validatePolicySize(
+    document: PolicyDocument,
+    violations: ValidationViolation[],
+): void {
     const policySize = new TextEncoder().encode(
         JSON.stringify(document),
     ).length;
@@ -227,7 +237,11 @@ function validatePolicyStructure(
             fix_hint: "Split into multiple policies",
         });
     }
+}
 
+function collectActionsPerStatement(
+    document: PolicyDocument,
+): Map<string, number[]> {
     const allActions = new Map<string, number[]>();
     for (let i = 0; i < document.Statement.length; i++) {
         const statement = document.Statement[i];
@@ -243,6 +257,14 @@ function validatePolicyStructure(
             }
         }
     }
+    return allActions;
+}
+
+function validateDuplicateActionsAcrossStatements(
+    document: PolicyDocument,
+    violations: ValidationViolation[],
+): void {
+    const allActions = collectActionsPerStatement(document);
 
     for (const [action, indices] of allActions) {
         if (indices.length > 1) {
@@ -259,8 +281,6 @@ function validatePolicyStructure(
             });
         }
     }
-
-    return violations;
 }
 
 function validateActionScoping(
@@ -274,85 +294,100 @@ function validateActionScoping(
     }
 
     for (const action of statement.Action) {
-        if (action === "*") {
-            violations.push({
-                rule_id: "LP-001",
-                severity: "error",
-                message: "Global wildcard action (*) is not permitted",
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Action",
-                current_value: "*",
-                auto_fixable: false,
-                fix_hint:
-                    "Replace * with specific actions for resources in this statement",
-            });
-        }
+        validateSingleAction(action, statement, statementIndex, violations);
+    }
 
-        if (
-            action !== "*" &&
-            action.endsWith(":*") &&
-            !action.startsWith("*")
-        ) {
-            violations.push({
-                rule_id: "LP-002",
-                severity: "error",
-                message: `Service-level wildcard action "${action}" is not permitted`,
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Action",
-                current_value: action,
-                auto_fixable: false,
-                fix_hint: `Replace ${action} with specific actions`,
-            });
+    validateNotActionUsage(statement, statementIndex, violations);
 
-            if (OVERLY_BROAD_ACTIONS.has(action)) {
-                violations.push({
-                    rule_id: "LP-005",
-                    severity: "warning",
-                    message: `Overly broad action "${action}" detected`,
-                    statement_sid: statement.Sid,
-                    statement_index: statementIndex,
-                    field: "Action",
-                    current_value: action,
-                    auto_fixable: false,
-                    fix_hint: `Replace ${action} with only the specific actions needed`,
-                });
-            }
-        }
+    return violations;
+}
 
-        if (DENY_LISTED_ACTIONS.has(action)) {
+function validateSingleAction(
+    action: string,
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
+    if (action === "*") {
+        violations.push({
+            rule_id: "LP-001",
+            severity: "error",
+            message: "Global wildcard action (*) is not permitted",
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Action",
+            current_value: "*",
+            auto_fixable: false,
+            fix_hint:
+                "Replace * with specific actions for resources in this statement",
+        });
+    }
+
+    if (action !== "*" && action.endsWith(":*") && !action.startsWith("*")) {
+        violations.push({
+            rule_id: "LP-002",
+            severity: "error",
+            message: `Service-level wildcard action "${action}" is not permitted`,
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Action",
+            current_value: action,
+            auto_fixable: false,
+            fix_hint: `Replace ${action} with specific actions`,
+        });
+
+        if (OVERLY_BROAD_ACTIONS.has(action)) {
             violations.push({
-                rule_id: "LP-004",
-                severity: "error",
-                message: `Deny-listed action "${action}" is not permitted`,
+                rule_id: "LP-005",
+                severity: "warning",
+                message: `Overly broad action "${action}" detected`,
                 statement_sid: statement.Sid,
                 statement_index: statementIndex,
                 field: "Action",
                 current_value: action,
                 auto_fixable: false,
-                fix_hint: `Remove deny-listed action "${action}"`,
-            });
-        }
-
-        if (
-            action.toLowerCase() === "sts:assumerole" &&
-            isWildcardResource(statement.Resource)
-        ) {
-            violations.push({
-                rule_id: "LP-004",
-                severity: "error",
-                message: "Unscoped sts:AssumeRole is not permitted",
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Action",
-                current_value: action,
-                auto_fixable: false,
-                fix_hint: "Scope sts:AssumeRole to specific role ARNs",
+                fix_hint: `Replace ${action} with only the specific actions needed`,
             });
         }
     }
 
+    if (DENY_LISTED_ACTIONS.has(action)) {
+        violations.push({
+            rule_id: "LP-004",
+            severity: "error",
+            message: `Deny-listed action "${action}" is not permitted`,
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Action",
+            current_value: action,
+            auto_fixable: false,
+            fix_hint: `Remove deny-listed action "${action}"`,
+        });
+    }
+
+    if (
+        action.toLowerCase() === "sts:assumerole" &&
+        isWildcardResource(statement.Resource)
+    ) {
+        violations.push({
+            rule_id: "LP-004",
+            severity: "error",
+            message: "Unscoped sts:AssumeRole is not permitted",
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Action",
+            current_value: action,
+            auto_fixable: false,
+            fix_hint: "Scope sts:AssumeRole to specific role ARNs",
+        });
+    }
+}
+
+function validateNotActionUsage(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
     if (
         "NotAction" in statement &&
         statement.NotAction &&
@@ -371,8 +406,6 @@ function validateActionScoping(
             fix_hint: "Replace NotAction with explicit Action list",
         });
     }
-
-    return violations;
 }
 
 function validateResourceScoping(
@@ -387,35 +420,59 @@ function validateResourceScoping(
     }
 
     if (isWildcardResource(statement.Resource)) {
-        for (const action of statement.Action) {
-            if (!isUnscopedAction(action, unscopedActions)) {
-                violations.push({
-                    rule_id: "LP-010",
-                    severity: "error",
-                    message: `Resource: "*" on action "${action}" that supports resource-level permissions`,
-                    statement_sid: statement.Sid,
-                    statement_index: statementIndex,
-                    field: "Resource",
-                    current_value: "*",
-                    auto_fixable: false,
-                    fix_hint: `Scope Resource to specific ARN pattern for "${action}"`,
-                });
-            } else {
-                violations.push({
-                    rule_id: "LP-011",
-                    severity: "warning",
-                    message: `Resource: "*" on unscoped action "${action}" — consider adding conditions`,
-                    statement_sid: statement.Sid,
-                    statement_index: statementIndex,
-                    field: "Resource",
-                    current_value: "*",
-                    auto_fixable: false,
-                    fix_hint: "Add conditions to further restrict scope",
-                });
-            }
-        }
+        validateWildcardActions(
+            statement,
+            statementIndex,
+            unscopedActions,
+            violations,
+        );
     }
 
+    validateResourceArns(statement, statementIndex, violations);
+
+    return violations;
+}
+
+function validateWildcardActions(
+    statement: PolicyStatement,
+    statementIndex: number,
+    unscopedActions: ReadonlySet<string>,
+    violations: ValidationViolation[],
+): void {
+    for (const action of statement.Action) {
+        if (!isUnscopedAction(action, unscopedActions)) {
+            violations.push({
+                rule_id: "LP-010",
+                severity: "error",
+                message: `Resource: "*" on action "${action}" that supports resource-level permissions`,
+                statement_sid: statement.Sid,
+                statement_index: statementIndex,
+                field: "Resource",
+                current_value: "*",
+                auto_fixable: false,
+                fix_hint: `Scope Resource to specific ARN pattern for "${action}"`,
+            });
+        } else {
+            violations.push({
+                rule_id: "LP-011",
+                severity: "warning",
+                message: `Resource: "*" on unscoped action "${action}" — consider adding conditions`,
+                statement_sid: statement.Sid,
+                statement_index: statementIndex,
+                field: "Resource",
+                current_value: "*",
+                auto_fixable: false,
+                fix_hint: "Add conditions to further restrict scope",
+            });
+        }
+    }
+}
+
+function validateResourceArns(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
     const resources =
         typeof statement.Resource === "string"
             ? [statement.Resource]
@@ -452,8 +509,6 @@ function validateResourceScoping(
             });
         }
     }
-
-    return violations;
 }
 
 function validateConditionRequirements(
@@ -466,140 +521,179 @@ function validateConditionRequirements(
         return violations;
     }
 
-    if (isActionInStatement(statement, "iam:PassRole")) {
-        if (isWildcardResource(statement.Resource)) {
-            violations.push({
-                rule_id: "LP-020",
-                severity: "error",
-                message: "iam:PassRole Resource must not be *",
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Resource",
-                current_value: "*",
-                auto_fixable: false,
-                fix_hint:
-                    "Scope iam:PassRole Resource to specific role ARN patterns",
-            });
-        }
+    validatePassRoleConditions(statement, statementIndex, violations);
+    validateCreateRoleConditions(statement, statementIndex, violations);
+    validateServiceLinkedRoleConditions(statement, statementIndex, violations);
+    validateRegionConditions(statement, statementIndex, violations);
+    validateTagConditions(statement, statementIndex, violations);
 
-        if (
-            !hasCondition(statement, "StringEquals", "iam:PassedToService") &&
-            !hasCondition(statement, "StringLike", "iam:PassedToService")
-        ) {
-            violations.push({
-                rule_id: "LP-021",
-                severity: "error",
-                message:
-                    "iam:PassRole must include iam:PassedToService condition",
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Condition",
-                current_value: statement.Condition ?? null,
-                auto_fixable: true,
-                fix_hint: "Add Condition.StringEquals.iam:PassedToService",
-                fix_data: { condition_key: "iam:PassedToService" },
-            });
-        }
-    }
+    return violations;
+}
 
-    if (isActionInStatement(statement, "iam:CreateRole")) {
-        if (
-            !hasCondition(statement, "StringEquals", "iam:PermissionsBoundary")
-        ) {
-            violations.push({
-                rule_id: "LP-022",
-                severity: "error",
-                message:
-                    "iam:CreateRole should have iam:PermissionsBoundary condition",
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Condition",
-                current_value: statement.Condition ?? null,
-                auto_fixable: false,
-                fix_hint:
-                    "Add Condition.StringEquals.iam:PermissionsBoundary with boundary ARN",
-            });
-        }
-    }
-
-    if (isActionInStatement(statement, "iam:CreateServiceLinkedRole")) {
-        if (
-            !hasCondition(statement, "StringEquals", "iam:AWSServiceName") &&
-            !hasCondition(statement, "StringLike", "iam:AWSServiceName")
-        ) {
-            violations.push({
-                rule_id: "LP-023",
-                severity: "error",
-                message:
-                    "iam:CreateServiceLinkedRole must have iam:AWSServiceName condition",
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Condition",
-                current_value: statement.Condition ?? null,
-                auto_fixable: true,
-                fix_hint: "Add Condition.StringEquals.iam:AWSServiceName",
-                fix_data: { condition_key: "iam:AWSServiceName" },
-            });
-        }
+function validatePassRoleConditions(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
+    if (!isActionInStatement(statement, "iam:PassRole")) {
+        return;
     }
 
     if (isWildcardResource(statement.Resource)) {
-        const hasRegionScoped = statement.Action.some((a) =>
-            REGION_SCOPED_SERVICES.has(extractServicePrefix(a)),
-        );
-        if (
-            hasRegionScoped &&
-            !hasCondition(statement, "StringEquals", "aws:RequestedRegion") &&
-            !hasCondition(statement, "StringLike", "aws:RequestedRegion")
-        ) {
-            violations.push({
-                rule_id: "LP-024",
-                severity: "warning",
-                message:
-                    'Resource: "*" on region-scoped service should have aws:RequestedRegion condition',
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Condition",
-                current_value: statement.Condition ?? null,
-                auto_fixable: true,
-                fix_hint: "Add Condition.StringEquals.aws:RequestedRegion",
-                fix_data: {
-                    condition_key: "aws:RequestedRegion",
-                },
-            });
-        }
+        violations.push({
+            rule_id: "LP-020",
+            severity: "error",
+            message: "iam:PassRole Resource must not be *",
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Resource",
+            current_value: "*",
+            auto_fixable: false,
+            fix_hint:
+                "Scope iam:PassRole Resource to specific role ARN patterns",
+        });
     }
 
+    if (
+        !hasCondition(statement, "StringEquals", "iam:PassedToService") &&
+        !hasCondition(statement, "StringLike", "iam:PassedToService")
+    ) {
+        violations.push({
+            rule_id: "LP-021",
+            severity: "error",
+            message: "iam:PassRole must include iam:PassedToService condition",
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Condition",
+            current_value: statement.Condition ?? null,
+            auto_fixable: true,
+            fix_hint: "Add Condition.StringEquals.iam:PassedToService",
+            fix_data: { condition_key: "iam:PassedToService" },
+        });
+    }
+}
+
+function validateCreateRoleConditions(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
+    if (!isActionInStatement(statement, "iam:CreateRole")) {
+        return;
+    }
+
+    if (!hasCondition(statement, "StringEquals", "iam:PermissionsBoundary")) {
+        violations.push({
+            rule_id: "LP-022",
+            severity: "error",
+            message:
+                "iam:CreateRole should have iam:PermissionsBoundary condition",
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Condition",
+            current_value: statement.Condition ?? null,
+            auto_fixable: false,
+            fix_hint:
+                "Add Condition.StringEquals.iam:PermissionsBoundary with boundary ARN",
+        });
+    }
+}
+
+function validateServiceLinkedRoleConditions(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
+    if (!isActionInStatement(statement, "iam:CreateServiceLinkedRole")) {
+        return;
+    }
+
+    if (
+        !hasCondition(statement, "StringEquals", "iam:AWSServiceName") &&
+        !hasCondition(statement, "StringLike", "iam:AWSServiceName")
+    ) {
+        violations.push({
+            rule_id: "LP-023",
+            severity: "error",
+            message:
+                "iam:CreateServiceLinkedRole must have iam:AWSServiceName condition",
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Condition",
+            current_value: statement.Condition ?? null,
+            auto_fixable: true,
+            fix_hint: "Add Condition.StringEquals.iam:AWSServiceName",
+            fix_data: { condition_key: "iam:AWSServiceName" },
+        });
+    }
+}
+
+function validateRegionConditions(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
+    if (!isWildcardResource(statement.Resource)) {
+        return;
+    }
+
+    const hasRegionScoped = statement.Action.some((a) =>
+        REGION_SCOPED_SERVICES.has(extractServicePrefix(a)),
+    );
+    if (
+        hasRegionScoped &&
+        !hasCondition(statement, "StringEquals", "aws:RequestedRegion") &&
+        !hasCondition(statement, "StringLike", "aws:RequestedRegion")
+    ) {
+        violations.push({
+            rule_id: "LP-024",
+            severity: "warning",
+            message:
+                'Resource: "*" on region-scoped service should have aws:RequestedRegion condition',
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Condition",
+            current_value: statement.Condition ?? null,
+            auto_fixable: true,
+            fix_hint: "Add Condition.StringEquals.aws:RequestedRegion",
+            fix_data: {
+                condition_key: "aws:RequestedRegion",
+            },
+        });
+    }
+}
+
+function validateTagConditions(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
     const hasCreationActions = statement.Action.some(isResourceCreationAction);
-    if (hasCreationActions) {
-        if (
-            !hasCondition(statement, "StringEquals", "aws:RequestTag") &&
-            !hasCondition(statement, "StringLike", "aws:RequestTag") &&
-            !hasCondition(
-                statement,
-                "ForAllValues:StringEquals",
-                "aws:RequestTag",
-            )
-        ) {
-            violations.push({
-                rule_id: "LP-025",
-                severity: "warning",
-                message:
-                    "Resource creation action should have aws:RequestTag conditions if mandatory tags are configured",
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Condition",
-                current_value: statement.Condition ?? null,
-                auto_fixable: true,
-                fix_hint: "Add aws:RequestTag conditions for mandatory tags",
-                fix_data: {
-                    condition_key: "aws:RequestTag",
-                },
-            });
-        }
+    if (!hasCreationActions) {
+        return;
     }
 
-    return violations;
+    if (
+        !hasCondition(statement, "StringEquals", "aws:RequestTag") &&
+        !hasCondition(statement, "StringLike", "aws:RequestTag") &&
+        !hasCondition(statement, "ForAllValues:StringEquals", "aws:RequestTag")
+    ) {
+        violations.push({
+            rule_id: "LP-025",
+            severity: "warning",
+            message:
+                "Resource creation action should have aws:RequestTag conditions if mandatory tags are configured",
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Condition",
+            current_value: statement.Condition ?? null,
+            auto_fixable: true,
+            fix_hint: "Add aws:RequestTag conditions for mandatory tags",
+            fix_data: {
+                condition_key: "aws:RequestTag",
+            },
+        });
+    }
 }
 
 function validateStatementStructure(
@@ -683,6 +777,25 @@ function validatePrivilegeEscalation(
         return violations;
     }
 
+    validateSelfModifyActions(statement, statementIndex, roleName, violations);
+    validateCreatePolicyVersion(
+        statement,
+        statementIndex,
+        roleName,
+        violations,
+    );
+    validateCreateRoleWithPassRole(statement, statementIndex, violations);
+    validateUnscopedPolicyModify(statement, statementIndex, violations);
+
+    return violations;
+}
+
+function validateSelfModifyActions(
+    statement: PolicyStatement,
+    statementIndex: number,
+    roleName: string,
+    violations: ValidationViolation[],
+): void {
     const hasSelfModifyActions = statement.Action.some(
         (a) => a === "iam:PutRolePolicy" || a === "iam:AttachRolePolicy",
     );
@@ -703,7 +816,14 @@ function validatePrivilegeEscalation(
             fix_hint: "Scope Resource to exclude the deployment role's own ARN",
         });
     }
+}
 
+function validateCreatePolicyVersion(
+    statement: PolicyStatement,
+    statementIndex: number,
+    roleName: string,
+    violations: ValidationViolation[],
+): void {
     if (
         isActionInStatement(statement, "iam:CreatePolicyVersion") &&
         matchesRoleSelfReference(statement.Resource, roleName)
@@ -722,26 +842,39 @@ function validatePrivilegeEscalation(
                 "Scope Resource to exclude the deployment role's own policies",
         });
     }
+}
 
-    if (isActionInStatement(statement, "iam:CreateRole")) {
-        const hasPassRole = statement.Action.some((a) => a === "iam:PassRole");
-        if (hasPassRole && isWildcardResource(statement.Resource)) {
-            violations.push({
-                rule_id: "LP-052",
-                severity: "error",
-                message:
-                    "When iam:CreateRole is present, iam:PassRole must be scoped to only created roles",
-                statement_sid: statement.Sid,
-                statement_index: statementIndex,
-                field: "Resource",
-                current_value: "*",
-                auto_fixable: false,
-                fix_hint:
-                    "Scope iam:PassRole Resource to only the roles created by this deployment",
-            });
-        }
+function validateCreateRoleWithPassRole(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
+    if (!isActionInStatement(statement, "iam:CreateRole")) {
+        return;
     }
+    const hasPassRole = statement.Action.some((a) => a === "iam:PassRole");
+    if (hasPassRole && isWildcardResource(statement.Resource)) {
+        violations.push({
+            rule_id: "LP-052",
+            severity: "error",
+            message:
+                "When iam:CreateRole is present, iam:PassRole must be scoped to only created roles",
+            statement_sid: statement.Sid,
+            statement_index: statementIndex,
+            field: "Resource",
+            current_value: "*",
+            auto_fixable: false,
+            fix_hint:
+                "Scope iam:PassRole Resource to only the roles created by this deployment",
+        });
+    }
+}
 
+function validateUnscopedPolicyModify(
+    statement: PolicyStatement,
+    statementIndex: number,
+    violations: ValidationViolation[],
+): void {
     const policyModifyActions = statement.Action.filter(
         (a) =>
             (a.startsWith("iam:Put") && a.includes("Policy")) ||
@@ -763,6 +896,4 @@ function validatePrivilegeEscalation(
             fix_hint: "Scope Resource to specific role/policy ARN patterns",
         });
     }
-
-    return violations;
 }

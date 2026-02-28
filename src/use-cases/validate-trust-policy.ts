@@ -76,186 +76,219 @@ export function createTrustPolicyValidator(): TrustPolicyValidator {
                     continue;
                 }
 
-                if (statement.Action !== "sts:AssumeRoleWithWebIdentity") {
-                    violations.push({
-                        rule_id: "LP-030",
-                        severity: "error",
-                        message:
-                            "Trust policy must use sts:AssumeRoleWithWebIdentity",
-                        statement_sid: statement.Sid,
-                        statement_index: i,
-                        field: "Action",
-                        current_value: statement.Action,
-                        auto_fixable: false,
-                        fix_hint:
-                            "Change Action to sts:AssumeRoleWithWebIdentity",
-                    });
-                }
-
-                const hasAud =
-                    hasConditionValue(
-                        statement.Condition,
-                        "StringEquals",
-                        OIDC_AUD_KEY,
-                    ) ||
-                    hasConditionValue(
-                        statement.Condition,
-                        "StringLike",
-                        OIDC_AUD_KEY,
-                    );
-
-                if (!hasAud) {
-                    violations.push({
-                        rule_id: "LP-031",
-                        severity: "error",
-                        message: `Trust policy must include aud condition with ${AUDIENCE_VALUE}`,
-                        statement_sid: statement.Sid,
-                        statement_index: i,
-                        field: "Condition",
-                        current_value: statement.Condition,
-                        auto_fixable: true,
-                        fix_hint: `Add Condition.StringEquals.${OIDC_AUD_KEY}: ${AUDIENCE_VALUE}`,
-                        fix_data: {
-                            condition_key: OIDC_AUD_KEY,
-                            condition_value: AUDIENCE_VALUE,
-                        },
-                    });
-                }
-
-                const hasSub =
-                    hasConditionValue(
-                        statement.Condition,
-                        "StringEquals",
-                        OIDC_SUB_KEY,
-                    ) ||
-                    hasConditionValue(
-                        statement.Condition,
-                        "StringLike",
-                        OIDC_SUB_KEY,
-                    );
-
-                if (!hasSub) {
-                    violations.push({
-                        rule_id: "LP-032",
-                        severity: "error",
-                        message: "Trust policy must include sub condition",
-                        statement_sid: statement.Sid,
-                        statement_index: i,
-                        field: "Condition",
-                        current_value: statement.Condition,
-                        auto_fixable: false,
-                        fix_hint: `Add Condition.StringEquals.${OIDC_SUB_KEY}`,
-                    });
-                } else {
-                    const subValue = getConditionValue(
-                        statement.Condition,
-                        OIDC_SUB_KEY,
-                    );
-                    const subStr =
-                        typeof subValue === "string"
-                            ? subValue
-                            : (subValue?.[0] ?? "");
-
-                    if (
-                        subStr.includes(":*") &&
-                        !subStr.includes(":pull_request") &&
-                        !subStr.includes(":ref:") &&
-                        !subStr.includes(":environment:")
-                    ) {
-                        violations.push({
-                            rule_id: "LP-033",
-                            severity: "error",
-                            message:
-                                "Trust policy sub must not use org-wide wildcard",
-                            statement_sid: statement.Sid,
-                            statement_index: i,
-                            field: "Condition",
-                            current_value: subStr,
-                            auto_fixable: false,
-                            fix_hint:
-                                "Scope sub condition to specific repo and event type",
-                        });
-                    }
-
-                    if (roleType === "plan") {
-                        if (!subStr.includes(":pull_request")) {
-                            violations.push({
-                                rule_id: "LP-035",
-                                severity: "error",
-                                message:
-                                    "Plan role trust policy must use pull_request subject",
-                                statement_sid: statement.Sid,
-                                statement_index: i,
-                                field: "Condition",
-                                current_value: subStr,
-                                auto_fixable: false,
-                                fix_hint:
-                                    "Set sub to repo:org/repo:pull_request",
-                            });
-                        }
-                    }
-
-                    if (roleType === "apply") {
-                        const hasMainRef = subStr.includes(
-                            "ref:refs/heads/main",
-                        );
-                        const hasEnvironment = subStr.includes("environment:");
-                        if (!hasMainRef && !hasEnvironment) {
-                            violations.push({
-                                rule_id: "LP-036",
-                                severity: "error",
-                                message:
-                                    "Apply role trust policy must use ref:refs/heads/main or environment:<name> subject",
-                                statement_sid: statement.Sid,
-                                statement_index: i,
-                                field: "Condition",
-                                current_value: subStr,
-                                auto_fixable: false,
-                                fix_hint:
-                                    "Set sub to repo:org/repo:ref:refs/heads/main or repo:org/repo:environment:<name>",
-                            });
-                        }
-                    }
-                }
-
-                for (const [operator, conditionBlock] of Object.entries(
-                    statement.Condition,
-                )) {
-                    if (operator === "StringLike") {
-                        for (const [key, value] of Object.entries(
-                            conditionBlock,
-                        )) {
-                            const strValue =
-                                typeof value === "string"
-                                    ? value
-                                    : (value[0] ?? "");
-                            if (!containsWildcard(strValue)) {
-                                violations.push({
-                                    rule_id: "LP-034",
-                                    severity: "warning",
-                                    message: `Prefer StringEquals over StringLike when no wildcards needed for "${key}"`,
-                                    statement_sid: statement.Sid,
-                                    statement_index: i,
-                                    field: "Condition",
-                                    current_value: {
-                                        operator,
-                                        key,
-                                        value: strValue,
-                                    },
-                                    auto_fixable: true,
-                                    fix_hint: `Replace StringLike with StringEquals for "${key}"`,
-                                    fix_data: {
-                                        condition_key: key,
-                                        condition_value: strValue,
-                                    },
-                                });
-                            }
-                        }
-                    }
-                }
+                validateStatementAction(statement, i, violations);
+                validateAudienceCondition(statement, i, violations);
+                validateSubjectCondition(statement, i, roleType, violations);
+                validateStringLikeUsage(statement, i, violations);
             }
 
             return violations;
         },
     };
+}
+
+function validateStatementAction(
+    statement: TrustPolicyStatement,
+    index: number,
+    violations: ValidationViolation[],
+): void {
+    if (statement.Action !== "sts:AssumeRoleWithWebIdentity") {
+        violations.push({
+            rule_id: "LP-030",
+            severity: "error",
+            message: "Trust policy must use sts:AssumeRoleWithWebIdentity",
+            statement_sid: statement.Sid,
+            statement_index: index,
+            field: "Action",
+            current_value: statement.Action,
+            auto_fixable: false,
+            fix_hint: "Change Action to sts:AssumeRoleWithWebIdentity",
+        });
+    }
+}
+
+function validateAudienceCondition(
+    statement: TrustPolicyStatement,
+    index: number,
+    violations: ValidationViolation[],
+): void {
+    const hasAud =
+        hasConditionValue(statement.Condition, "StringEquals", OIDC_AUD_KEY) ||
+        hasConditionValue(statement.Condition, "StringLike", OIDC_AUD_KEY);
+
+    if (!hasAud) {
+        violations.push({
+            rule_id: "LP-031",
+            severity: "error",
+            message: `Trust policy must include aud condition with ${AUDIENCE_VALUE}`,
+            statement_sid: statement.Sid,
+            statement_index: index,
+            field: "Condition",
+            current_value: statement.Condition,
+            auto_fixable: true,
+            fix_hint: `Add Condition.StringEquals.${OIDC_AUD_KEY}: ${AUDIENCE_VALUE}`,
+            fix_data: {
+                condition_key: OIDC_AUD_KEY,
+                condition_value: AUDIENCE_VALUE,
+            },
+        });
+    }
+}
+
+function validateSubjectCondition(
+    statement: TrustPolicyStatement,
+    index: number,
+    roleType: RoleType,
+    violations: ValidationViolation[],
+): void {
+    const hasSub =
+        hasConditionValue(statement.Condition, "StringEquals", OIDC_SUB_KEY) ||
+        hasConditionValue(statement.Condition, "StringLike", OIDC_SUB_KEY);
+
+    if (!hasSub) {
+        violations.push({
+            rule_id: "LP-032",
+            severity: "error",
+            message: "Trust policy must include sub condition",
+            statement_sid: statement.Sid,
+            statement_index: index,
+            field: "Condition",
+            current_value: statement.Condition,
+            auto_fixable: false,
+            fix_hint: `Add Condition.StringEquals.${OIDC_SUB_KEY}`,
+        });
+        return;
+    }
+
+    const subValue = getConditionValue(statement.Condition, OIDC_SUB_KEY);
+    const subStr =
+        typeof subValue === "string" ? subValue : (subValue?.[0] ?? "");
+
+    validateSubjectWildcard(statement, index, subStr, violations);
+    validateSubjectRoleType(statement, index, subStr, roleType, violations);
+}
+
+function validateSubjectWildcard(
+    statement: TrustPolicyStatement,
+    index: number,
+    subStr: string,
+    violations: ValidationViolation[],
+): void {
+    if (
+        subStr.includes(":*") &&
+        !subStr.includes(":pull_request") &&
+        !subStr.includes(":ref:") &&
+        !subStr.includes(":environment:")
+    ) {
+        violations.push({
+            rule_id: "LP-033",
+            severity: "error",
+            message: "Trust policy sub must not use org-wide wildcard",
+            statement_sid: statement.Sid,
+            statement_index: index,
+            field: "Condition",
+            current_value: subStr,
+            auto_fixable: false,
+            fix_hint: "Scope sub condition to specific repo and event type",
+        });
+    }
+}
+
+function validateSubjectRoleType(
+    statement: TrustPolicyStatement,
+    index: number,
+    subStr: string,
+    roleType: RoleType,
+    violations: ValidationViolation[],
+): void {
+    if (roleType === "plan" && !subStr.includes(":pull_request")) {
+        violations.push({
+            rule_id: "LP-035",
+            severity: "error",
+            message: "Plan role trust policy must use pull_request subject",
+            statement_sid: statement.Sid,
+            statement_index: index,
+            field: "Condition",
+            current_value: subStr,
+            auto_fixable: false,
+            fix_hint: "Set sub to repo:org/repo:pull_request",
+        });
+    }
+
+    if (roleType === "apply") {
+        const hasMainRef = subStr.includes("ref:refs/heads/main");
+        const hasEnvironment = subStr.includes("environment:");
+        if (!hasMainRef && !hasEnvironment) {
+            violations.push({
+                rule_id: "LP-036",
+                severity: "error",
+                message:
+                    "Apply role trust policy must use ref:refs/heads/main or environment:<name> subject",
+                statement_sid: statement.Sid,
+                statement_index: index,
+                field: "Condition",
+                current_value: subStr,
+                auto_fixable: false,
+                fix_hint:
+                    "Set sub to repo:org/repo:ref:refs/heads/main or repo:org/repo:environment:<name>",
+            });
+        }
+    }
+}
+
+function checkStringLikeEntry(
+    key: string,
+    value: string | readonly string[],
+    operator: string,
+    statement: TrustPolicyStatement,
+    index: number,
+    violations: ValidationViolation[],
+): void {
+    const strValue = typeof value === "string" ? value : (value[0] ?? "");
+    if (containsWildcard(strValue)) {
+        return;
+    }
+    violations.push({
+        rule_id: "LP-034",
+        severity: "warning",
+        message: `Prefer StringEquals over StringLike when no wildcards needed for "${key}"`,
+        statement_sid: statement.Sid,
+        statement_index: index,
+        field: "Condition",
+        current_value: {
+            operator,
+            key,
+            value: strValue,
+        },
+        auto_fixable: true,
+        fix_hint: `Replace StringLike with StringEquals for "${key}"`,
+        fix_data: {
+            condition_key: key,
+            condition_value: strValue,
+        },
+    });
+}
+
+function validateStringLikeUsage(
+    statement: TrustPolicyStatement,
+    index: number,
+    violations: ValidationViolation[],
+): void {
+    for (const [operator, conditionBlock] of Object.entries(
+        statement.Condition,
+    )) {
+        if (operator !== "StringLike") {
+            continue;
+        }
+        for (const [key, value] of Object.entries(conditionBlock)) {
+            checkStringLikeEntry(
+                key,
+                value,
+                operator,
+                statement,
+                index,
+                violations,
+            );
+        }
+    }
 }

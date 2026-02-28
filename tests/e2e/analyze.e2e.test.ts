@@ -2,7 +2,112 @@ import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GenericContainer, Network, Wait } from "testcontainers";
+import {
+    GenericContainer,
+    Network,
+    type StartedGenericContainer,
+    type StartedNetwork,
+    Wait,
+} from "testcontainers";
+
+interface TerraformPlanResult {
+    planPath: string;
+    stablePlanDir: string;
+}
+
+async function startMotoContainer(
+    network: StartedNetwork,
+): Promise<StartedGenericContainer> {
+    return new GenericContainer("motoserver/moto:5.1.2")
+        .withNetwork(network)
+        .withNetworkAliases("moto")
+        .withExposedPorts(5000)
+        .withWaitStrategy(Wait.forHttp("/moto-api/", 5000).forStatusCode(200))
+        .start();
+}
+
+async function runTerraformCommands(
+    container: StartedGenericContainer,
+): Promise<void> {
+    const initResult = await container.exec([
+        "terraform",
+        "init",
+        "-input=false",
+    ]);
+    if (initResult.exitCode !== 0) {
+        throw new Error(
+            `terraform init failed (exit ${initResult.exitCode}): ${initResult.output}`,
+        );
+    }
+
+    const planResult = await container.exec([
+        "terraform",
+        "plan",
+        "-input=false",
+        "-out=tfplan",
+    ]);
+    if (planResult.exitCode !== 0) {
+        throw new Error(
+            `terraform plan failed (exit ${planResult.exitCode}): ${planResult.output}`,
+        );
+    }
+
+    const showResult = await container.exec([
+        "sh",
+        "-c",
+        "terraform show -json tfplan > /workspace/plan.json",
+    ]);
+    if (showResult.exitCode !== 0) {
+        throw new Error(
+            `terraform show failed (exit ${showResult.exitCode}): ${showResult.output}`,
+        );
+    }
+}
+
+async function generateTerraformPlan(
+    network: StartedNetwork,
+): Promise<TerraformPlanResult> {
+    const motoContainer = await startMotoContainer(network);
+
+    try {
+        const workDir = mkdtempSync(join(tmpdir(), "lousy-iam-e2e-"));
+        cpSync(FIXTURES_DIR, workDir, { recursive: true });
+
+        const terraformContainer = await new GenericContainer(
+            "hashicorp/terraform:1.12.0",
+        )
+            .withNetwork(network)
+            .withBindMounts([{ source: workDir, target: "/workspace" }])
+            .withWorkingDir("/workspace")
+            .withEntrypoint(["sh"])
+            .withCommand(["-c", "tail -f /dev/null"])
+            .start();
+
+        try {
+            await runTerraformCommands(terraformContainer);
+
+            const rawPlanPath = join(workDir, "plan.json");
+            const content = readFileSync(rawPlanPath, "utf-8");
+            if (!content.trim()) {
+                throw new Error("terraform show produced empty plan.json");
+            }
+
+            const stablePlanDir = mkdtempSync(
+                join(tmpdir(), "lousy-iam-plan-"),
+            );
+            const planPath = join(stablePlanDir, "plan.json");
+            cpSync(rawPlanPath, planPath);
+
+            return { planPath, stablePlanDir };
+        } finally {
+            await terraformContainer.stop();
+            rmSync(workDir, { recursive: true, force: true });
+        }
+    } finally {
+        await motoContainer.stop();
+    }
+}
+
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createAnalyzeCommand } from "../../src/commands/analyze.js";
 import { createActionMappingDb } from "../../src/gateways/action-mapping-db.js";
@@ -34,91 +139,9 @@ describe("analyze command e2e", () => {
         const network = await new Network().start();
 
         try {
-            const motoContainer = await new GenericContainer(
-                "motoserver/moto:5.1.2",
-            )
-                .withNetwork(network)
-                .withNetworkAliases("moto")
-                .withExposedPorts(5000)
-                .withWaitStrategy(
-                    Wait.forHttp("/moto-api/", 5000).forStatusCode(200),
-                )
-                .start();
-
-            try {
-                const workDir = mkdtempSync(join(tmpdir(), "lousy-iam-e2e-"));
-                cpSync(FIXTURES_DIR, workDir, { recursive: true });
-
-                const terraformContainer = await new GenericContainer(
-                    "hashicorp/terraform:1.12.0",
-                )
-                    .withNetwork(network)
-                    .withBindMounts([
-                        {
-                            source: workDir,
-                            target: "/workspace",
-                        },
-                    ])
-                    .withWorkingDir("/workspace")
-                    .withEntrypoint(["sh"])
-                    .withCommand(["-c", "tail -f /dev/null"])
-                    .start();
-
-                try {
-                    const initResult = await terraformContainer.exec([
-                        "terraform",
-                        "init",
-                        "-input=false",
-                    ]);
-                    if (initResult.exitCode !== 0) {
-                        throw new Error(
-                            `terraform init failed (exit ${initResult.exitCode}): ${initResult.output}`,
-                        );
-                    }
-
-                    const planResult = await terraformContainer.exec([
-                        "terraform",
-                        "plan",
-                        "-input=false",
-                        "-out=tfplan",
-                    ]);
-                    if (planResult.exitCode !== 0) {
-                        throw new Error(
-                            `terraform plan failed (exit ${planResult.exitCode}): ${planResult.output}`,
-                        );
-                    }
-
-                    const showResult = await terraformContainer.exec([
-                        "sh",
-                        "-c",
-                        "terraform show -json tfplan > /workspace/plan.json",
-                    ]);
-                    if (showResult.exitCode !== 0) {
-                        throw new Error(
-                            `terraform show failed (exit ${showResult.exitCode}): ${showResult.output}`,
-                        );
-                    }
-
-                    const rawPlanPath = join(workDir, "plan.json");
-                    const content = readFileSync(rawPlanPath, "utf-8");
-                    if (!content.trim()) {
-                        throw new Error(
-                            "terraform show produced empty plan.json",
-                        );
-                    }
-
-                    stablePlanDir = mkdtempSync(
-                        join(tmpdir(), "lousy-iam-plan-"),
-                    );
-                    planPath = join(stablePlanDir, "plan.json");
-                    cpSync(rawPlanPath, planPath);
-                } finally {
-                    await terraformContainer.stop();
-                    rmSync(workDir, { recursive: true, force: true });
-                }
-            } finally {
-                await motoContainer.stop();
-            }
+            const result = await generateTerraformPlan(network);
+            planPath = result.planPath;
+            stablePlanDir = result.stablePlanDir;
         } finally {
             await network.stop();
         }

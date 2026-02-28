@@ -94,6 +94,268 @@ function toSidSegment(service: string): string {
         .join("");
 }
 
+// biome-ignore lint/suspicious/noTemplateCurlyInString: IAM placeholder
+const REGION_PLACEHOLDER = "${region}";
+
+function fixVersion(): string {
+    return "2012-10-17";
+}
+
+function fixMissingSid(statements: PolicyStatement[], index: number): void {
+    const stmt = statements[index];
+    if (!stmt) {
+        return;
+    }
+    const service = extractServicePrefix(stmt.Action[0] ?? "Unknown");
+    statements[index] = {
+        ...stmt,
+        Sid: `${toSidSegment(service)}Statement${index}`,
+    };
+}
+
+function fixDuplicateActions(
+    statements: PolicyStatement[],
+    index: number,
+): void {
+    const stmt = statements[index];
+    if (!stmt) {
+        return;
+    }
+    statements[index] = {
+        ...stmt,
+        Action: [...new Set(stmt.Action)],
+    };
+}
+
+function fixCrossStatementDuplicates(
+    statements: PolicyStatement[],
+    violation: ValidationViolation,
+): void {
+    const fixData = violation.fix_data;
+    if (!fixData) {
+        return;
+    }
+    const action = fixData.action;
+    const indices = fixData.statement_indices;
+    if (
+        typeof action !== "string" ||
+        !Array.isArray(indices) ||
+        indices.length <= 1
+    ) {
+        return;
+    }
+
+    const bestIndex = findBestStatementIndex(statements, indices);
+
+    for (const idx of indices) {
+        if (idx === bestIndex) {
+            continue;
+        }
+        const stmt = statements[idx];
+        if (stmt) {
+            statements[idx] = {
+                ...stmt,
+                Action: stmt.Action.filter((a) => a !== action),
+            };
+        }
+    }
+}
+
+function getStatementSpecificity(statement: PolicyStatement): number {
+    const resource =
+        typeof statement.Resource === "string"
+            ? statement.Resource
+            : (statement.Resource[0] ?? "*");
+    return resource === "*" ? Infinity : resource.length;
+}
+
+function findBestStatementIndex(
+    statements: readonly PolicyStatement[],
+    indices: readonly number[],
+): number {
+    let bestIndex = indices[0] ?? 0;
+    let bestSpecificity = Infinity;
+
+    for (const idx of indices) {
+        const stmt = statements[idx];
+        if (!stmt) {
+            continue;
+        }
+        const specificity = getStatementSpecificity(stmt);
+        if (specificity < bestSpecificity) {
+            bestSpecificity = specificity;
+            bestIndex = idx;
+        }
+    }
+
+    return bestIndex;
+}
+
+function fixConditionAtIndex(
+    statements: PolicyStatement[],
+    index: number | undefined,
+    operator: string,
+    key: string,
+    value: string | readonly string[],
+): void {
+    if (index === undefined || !statements[index]) {
+        return;
+    }
+    statements[index] = addConditionToStatement(
+        statements[index],
+        operator,
+        key,
+        value,
+    );
+}
+
+function applyPermissionFix(
+    violation: ValidationViolation,
+    statements: PolicyStatement[],
+): string | undefined {
+    const index = violation.statement_index;
+
+    switch (violation.rule_id) {
+        case "LP-040":
+            return fixVersion();
+        case "LP-041":
+            fixMissingSid(statements, index ?? -1);
+            return undefined;
+        case "LP-045":
+            fixDuplicateActions(statements, index ?? -1);
+            return undefined;
+        case "LP-046":
+            fixCrossStatementDuplicates(statements, violation);
+            return undefined;
+        case "LP-021":
+            fixConditionAtIndex(
+                statements,
+                index,
+                "StringEquals",
+                "iam:PassedToService",
+                "SERVICE_PRINCIPAL",
+            );
+            return undefined;
+        case "LP-023":
+            fixConditionAtIndex(
+                statements,
+                index,
+                "StringEquals",
+                "iam:AWSServiceName",
+                "SERVICE_NAME",
+            );
+            return undefined;
+        case "LP-024":
+            fixConditionAtIndex(
+                statements,
+                index,
+                "StringEquals",
+                "aws:RequestedRegion",
+                REGION_PLACEHOLDER,
+            );
+            return undefined;
+        case "LP-025":
+            fixConditionAtIndex(
+                statements,
+                index,
+                "StringEquals",
+                "aws:RequestTag",
+                "REQUIRED_TAG_VALUE",
+            );
+            return undefined;
+        default:
+            return undefined;
+    }
+}
+
+function fixAudienceCondition(
+    statements: TrustPolicyStatement[],
+    index: number,
+): void {
+    const stmt = statements[index];
+    if (!stmt) {
+        return;
+    }
+    const existingStringEquals = stmt.Condition.StringEquals ?? {};
+    statements[index] = {
+        ...stmt,
+        Condition: {
+            ...stmt.Condition,
+            StringEquals: {
+                ...existingStringEquals,
+                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+            },
+        },
+    };
+}
+
+function fixStringLikeToStringEquals(
+    statements: TrustPolicyStatement[],
+    violation: ValidationViolation,
+): void {
+    const index = violation.statement_index;
+    if (index === undefined || !statements[index]) {
+        return;
+    }
+    const stmt = statements[index];
+    const fixData = violation.fix_data;
+    if (!fixData) {
+        return;
+    }
+    const key = fixData.condition_key;
+    const value = fixData.condition_value;
+    if (typeof key !== "string" || typeof value !== "string") {
+        return;
+    }
+    const stringLike = stmt.Condition.StringLike;
+    if (!stringLike) {
+        return;
+    }
+
+    const newStringLike = { ...stringLike };
+    delete (newStringLike as Record<string, unknown>)[key];
+
+    const existingStringEquals = stmt.Condition.StringEquals ?? {};
+    const newCondition: Record<
+        string,
+        Record<string, string | readonly string[]>
+    > = {
+        ...stmt.Condition,
+        StringEquals: {
+            ...existingStringEquals,
+            [key]: value,
+        },
+    };
+
+    if (Object.keys(newStringLike).length === 0) {
+        delete newCondition.StringLike;
+    } else {
+        newCondition.StringLike = newStringLike;
+    }
+
+    statements[index] = {
+        ...stmt,
+        Condition: newCondition,
+    };
+}
+
+function applyTrustFix(
+    violation: ValidationViolation,
+    statements: TrustPolicyStatement[],
+): void {
+    const index = violation.statement_index;
+    switch (violation.rule_id) {
+        case "LP-031":
+            if (index !== undefined) {
+                fixAudienceCondition(statements, index);
+            }
+            break;
+        case "LP-034":
+            fixStringLikeToStringEquals(statements, violation);
+            break;
+    }
+}
+
 export function createPolicyFixer(): PolicyFixer {
     return {
         fixPermissionPolicy(
@@ -112,134 +374,12 @@ export function createPolicyFixer(): PolicyFixer {
             let fixedVersion = document.Version;
 
             for (const violation of fixableViolations) {
-                switch (violation.rule_id) {
-                    case "LP-040": {
-                        fixedVersion = "2012-10-17";
-                        break;
-                    }
-                    case "LP-041": {
-                        const index = violation.statement_index;
-                        if (index !== undefined && fixedStatements[index]) {
-                            const stmt = fixedStatements[index];
-                            const service = extractServicePrefix(
-                                stmt.Action[0] ?? "Unknown",
-                            );
-                            fixedStatements[index] = {
-                                ...stmt,
-                                Sid: `${toSidSegment(service)}Statement${index}`,
-                            };
-                        }
-                        break;
-                    }
-                    case "LP-045": {
-                        const index = violation.statement_index;
-                        if (index !== undefined && fixedStatements[index]) {
-                            const stmt = fixedStatements[index];
-                            fixedStatements[index] = {
-                                ...stmt,
-                                Action: [...new Set(stmt.Action)],
-                            };
-                        }
-                        break;
-                    }
-                    case "LP-046": {
-                        const fixData = violation.fix_data;
-                        if (fixData) {
-                            const action = fixData.action;
-                            const indices = fixData.statement_indices;
-                            if (
-                                typeof action === "string" &&
-                                Array.isArray(indices) &&
-                                indices.length > 1
-                            ) {
-                                let bestIndex = indices[0] ?? 0;
-                                let bestSpecificity = Infinity;
-
-                                for (const idx of indices) {
-                                    const stmt = fixedStatements[idx];
-                                    if (!stmt) {
-                                        continue;
-                                    }
-                                    const resource =
-                                        typeof stmt.Resource === "string"
-                                            ? stmt.Resource
-                                            : (stmt.Resource[0] ?? "*");
-                                    const specificity =
-                                        resource === "*"
-                                            ? Infinity
-                                            : resource.length;
-                                    if (specificity < bestSpecificity) {
-                                        bestSpecificity = specificity;
-                                        bestIndex = idx;
-                                    }
-                                }
-
-                                for (const idx of indices) {
-                                    if (idx !== bestIndex) {
-                                        const stmt = fixedStatements[idx];
-                                        if (stmt) {
-                                            fixedStatements[idx] = {
-                                                ...stmt,
-                                                Action: stmt.Action.filter(
-                                                    (a) => a !== action,
-                                                ),
-                                            };
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    }
-                    case "LP-021": {
-                        const index = violation.statement_index;
-                        if (index !== undefined && fixedStatements[index]) {
-                            fixedStatements[index] = addConditionToStatement(
-                                fixedStatements[index],
-                                "StringEquals",
-                                "iam:PassedToService",
-                                "SERVICE_PRINCIPAL",
-                            );
-                        }
-                        break;
-                    }
-                    case "LP-023": {
-                        const index = violation.statement_index;
-                        if (index !== undefined && fixedStatements[index]) {
-                            fixedStatements[index] = addConditionToStatement(
-                                fixedStatements[index],
-                                "StringEquals",
-                                "iam:AWSServiceName",
-                                "SERVICE_NAME",
-                            );
-                        }
-                        break;
-                    }
-                    case "LP-024": {
-                        const index = violation.statement_index;
-                        if (index !== undefined && fixedStatements[index]) {
-                            fixedStatements[index] = addConditionToStatement(
-                                fixedStatements[index],
-                                "StringEquals",
-                                "aws:RequestedRegion",
-                                // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM placeholder
-                                "${region}",
-                            );
-                        }
-                        break;
-                    }
-                    case "LP-025": {
-                        const index = violation.statement_index;
-                        if (index !== undefined && fixedStatements[index]) {
-                            fixedStatements[index] = addConditionToStatement(
-                                fixedStatements[index],
-                                "StringEquals",
-                                "aws:RequestTag",
-                                "REQUIRED_TAG_VALUE",
-                            );
-                        }
-                        break;
-                    }
+                const versionOverride = applyPermissionFix(
+                    violation,
+                    fixedStatements,
+                );
+                if (versionOverride !== undefined) {
+                    fixedVersion = versionOverride;
                 }
             }
 
@@ -268,85 +408,7 @@ export function createPolicyFixer(): PolicyFixer {
             const fixedStatements = [...document.Statement];
 
             for (const violation of fixableViolations) {
-                switch (violation.rule_id) {
-                    case "LP-031": {
-                        const index = violation.statement_index;
-                        if (index !== undefined && fixedStatements[index]) {
-                            const stmt = fixedStatements[index];
-                            const existingStringEquals =
-                                stmt.Condition.StringEquals ?? {};
-                            fixedStatements[index] = {
-                                ...stmt,
-                                Condition: {
-                                    ...stmt.Condition,
-                                    StringEquals: {
-                                        ...existingStringEquals,
-                                        "token.actions.githubusercontent.com:aud":
-                                            "sts.amazonaws.com",
-                                    },
-                                },
-                            };
-                        }
-                        break;
-                    }
-                    case "LP-034": {
-                        const index = violation.statement_index;
-                        if (index !== undefined && fixedStatements[index]) {
-                            const stmt = fixedStatements[index];
-                            const fixData = violation.fix_data;
-                            if (fixData) {
-                                const key = fixData.condition_key;
-                                const value = fixData.condition_value;
-                                if (
-                                    typeof key !== "string" ||
-                                    typeof value !== "string"
-                                ) {
-                                    break;
-                                }
-                                const stringLike = stmt.Condition.StringLike;
-                                if (stringLike) {
-                                    const newStringLike = {
-                                        ...stringLike,
-                                    };
-                                    delete (
-                                        newStringLike as Record<string, unknown>
-                                    )[key];
-
-                                    const existingStringEquals =
-                                        stmt.Condition.StringEquals ?? {};
-
-                                    const newCondition: Record<
-                                        string,
-                                        Record<
-                                            string,
-                                            string | readonly string[]
-                                        >
-                                    > = {
-                                        ...stmt.Condition,
-                                        StringEquals: {
-                                            ...existingStringEquals,
-                                            [key]: value,
-                                        },
-                                    };
-
-                                    if (
-                                        Object.keys(newStringLike).length === 0
-                                    ) {
-                                        delete newCondition.StringLike;
-                                    } else {
-                                        newCondition.StringLike = newStringLike;
-                                    }
-
-                                    fixedStatements[index] = {
-                                        ...stmt,
-                                        Condition: newCondition,
-                                    };
-                                }
-                            }
-                        }
-                        break;
-                    }
-                }
+                applyTrustFix(violation, fixedStatements);
             }
 
             return {
