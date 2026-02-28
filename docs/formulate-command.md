@@ -144,15 +144,19 @@ By default, the apply role trust policy scopes to the `main` branch:
 
 ### AWS Partition Resolution
 
-When `account_id` is provided in the configuration, the OIDC provider ARN uses the actual account ID instead of `${account_id}`. The AWS partition is automatically derived from the `region` configuration:
+The AWS partition for the OIDC provider ARN is always derived from the `region` configuration, regardless of whether `account_id` is provided. When `account_id` is provided, the ARN uses your actual AWS account ID; when it is omitted, the `${account_id}` template placeholder is kept, but the partition still changes based on the region.
 
-| Region | Partition | OIDC ARN Example |
-|--------|-----------|-----------------|
+| Region | Partition | OIDC ARN Example (real account ID) |
+|--------|-----------|-------------------------------------|
 | Standard (e.g., `us-east-1`) | `aws` | `arn:aws:iam::123456789012:oidc-provider/...` |
 | GovCloud (e.g., `us-gov-west-1`) | `aws-us-gov` | `arn:aws-us-gov:iam::123456789012:oidc-provider/...` |
 | China (e.g., `cn-north-1`) | `aws-cn` | `arn:aws-cn:iam::123456789012:oidc-provider/...` |
 
-When `account_id` is not provided, the `${account_id}` template placeholder is used instead.
+When `account_id` is not provided, the `${account_id}` template placeholder is used instead of a concrete ID, but the partition still follows the region. For example:
+
+- Standard: `arn:aws:iam::${account_id}:oidc-provider/...`
+- GovCloud: `arn:aws-us-gov:iam::${account_id}:oidc-provider/...`
+- China: `arn:aws-cn:iam::${account_id}:oidc-provider/...`
 
 ### Plan Role Trust
 

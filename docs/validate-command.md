@@ -102,7 +102,7 @@ The validate command outputs JSON with validation results:
 
 **valid**: `true` if all roles pass all rules with zero errors; `false` otherwise.
 
-**fix_iterations**: Number of auto-fix cycles performed. `0` means no auto-fixable violations were found.
+**fix_iterations**: Maximum number of auto-fix cycles applied to any single policy across all roles. `0` means no auto-fixable violations were found.
 
 **role_results**: Array of results per role, each containing:
 - `role_name` — Name of the IAM role
@@ -175,7 +175,7 @@ The validate command outputs JSON with validation results:
 | LP-041 | Error | ✅ | Statement lacks an explicit `Sid` |
 | LP-042 | Error | No | Policy document exceeds 6,144 bytes |
 | LP-043 | Warning | No | Statement contains more than 20 actions |
-| LP-044 | Warning | No | Policy document contains more than 10 statements |
+| LP-044 | Warning | No | Policy document contains more than 10 statements (the CLI message references "managed policies per role" but the check counts statements) |
 | LP-045 | Error | ✅ | Duplicate actions within a statement |
 | LP-046 | Warning | ✅ | Duplicate actions across statements |
 
