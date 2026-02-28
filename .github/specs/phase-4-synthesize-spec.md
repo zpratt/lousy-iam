@@ -30,7 +30,8 @@ so that I can **create IAM roles using the AWS JavaScript SDK v3 without manual 
 - When the `synthesize` command receives valid formulation output, the `CLI` shall produce a `CreateRoleCommandInput` payload for each role definition.
 - The `CLI` shall set `RoleName` from the role definition's `role_name`.
 - The `CLI` shall set `AssumeRolePolicyDocument` to the JSON-stringified trust policy document.
-- The `CLI` shall set `Path` from the role definition's `role_path`.
+- The `CLI` shall normalize the role definition's `role_path` so that it starts and ends with `/` before using it in any payload or ARN computation. A single `/` represents the root path. For example, `deployment` becomes `/deployment/`, `/deployment` becomes `/deployment/`, and `/` remains `/`.
+- The `CLI` shall set `Path` from the normalized `role_path`.
 - The `CLI` shall set `Description` from the role definition's `description`.
 - The `CLI` shall set `MaxSessionDuration` from the role definition's `max_session_duration`.
 - Where `permission_boundary_arn` is not null, the `CLI` shall set `PermissionsBoundary` to the permission boundary ARN.
@@ -47,7 +48,7 @@ so that I can **create IAM managed policies using the AWS JavaScript SDK v3**.
 - When the `synthesize` command receives valid formulation output, the `CLI` shall produce a `CreatePolicyCommandInput` payload for each permission policy in each role.
 - The `CLI` shall set `PolicyName` from the permission policy's `policy_name`.
 - The `CLI` shall set `PolicyDocument` to the JSON-stringified permission policy document.
-- The `CLI` shall set `Path` from the role definition's `role_path`.
+- The `CLI` shall set `Path` from the normalized `role_path` (see Story 1 normalization rule).
 - The `CLI` shall set `Description` to a generated description referencing the role name (e.g., `"Permission policy for role <role_name>"`).
 
 ### Story 3: Synthesize AttachRolePolicyCommand Payloads
@@ -60,7 +61,7 @@ so that I can **attach managed policies to roles using the AWS JavaScript SDK v3
 
 - When the `synthesize` command receives valid formulation output, the `CLI` shall produce an `AttachRolePolicyCommandInput` payload for each role-policy pair.
 - The `CLI` shall set `RoleName` from the role definition's `role_name`.
-- The `CLI` shall generate `PolicyArn` using the pattern `arn:{partition}:iam::{account_id}:policy{path}{policy_name}`.
+- The `CLI` shall generate `PolicyArn` using the pattern `arn:{partition}:iam::{account_id}:policy{normalized_path}{policy_name}`, where `{normalized_path}` is the `role_path` after applying the Story 1 normalization rule (ensuring leading and trailing `/`).
 - The `CLI` shall derive the partition from the config's `region` field using the existing `resolvePartition` logic (`aws`, `aws-us-gov`, `aws-cn`).
 
 ### Story 4: Resolve Template Variables
@@ -71,10 +72,14 @@ so that **the payloads are ready to use without manual string replacement**.
 
 #### Acceptance Criteria
 
+- The `CLI` shall use the formulation output's `template_variables` map as the authoritative manifest of which template variables exist in the generated policies.
+- When resolving template variables, the `CLI` shall apply the following precedence (highest to lowest): (1) values from the `--config` file, (2) values from `formulationOutput.template_variables` that are valid resolved values (not descriptive placeholders).
+- The `CLI` shall treat a `template_variables` value as a descriptive placeholder (not a resolved value) when it does not match the expected format for that variable (e.g., `account_id` values must be a 12-digit string, `region` values must match an AWS region pattern). Descriptive placeholders like `"Target AWS account ID"` shall not be used as resolved values.
 - When the formulation output contains `${account_id}` placeholders and the config file provides `account_id`, the `CLI` shall replace all occurrences with the resolved value.
-- When the formulation output contains template variable placeholders and the config file does not provide the required values, then the `CLI` shall print an error message explaining which fields are missing and how to resolve the situation.
+- When the `CLI` discovers required template variables via `template_variables` that have only descriptive placeholder values and the config file does not provide the required values, then the `CLI` shall print an error message listing the missing variables (by key name) and explaining that they must be supplied in the config file.
 - If the config file does not contain `account_id` and the formulation output contains `${account_id}` placeholders, then the `CLI` shall exit with a non-zero exit code.
 - The `CLI` shall resolve template variables in all string fields of the synthesized output, including ARNs in trust policies, resource ARNs in permission policies, and generated `PolicyArn` values.
+- When `template_variables` and `--config` both provide a resolved value for the same variable, the `CLI` shall use the `--config` value.
 
 ### Story 5: Validate Before Synthesizing
 
@@ -87,7 +92,7 @@ so that **only policies that pass all security rules are synthesized into deploy
 - When the `synthesize` command receives formulation output, the `CLI` shall run the Phase 3 validate-and-fix orchestrator internally before generating payloads.
 - If validation finds errors that cannot be auto-fixed, then the `CLI` shall print the validation results to stderr and exit with a non-zero exit code.
 - If validation finds only warnings (no errors), the `CLI` shall proceed with synthesis and log the warnings to stderr.
-- The `CLI` shall use the auto-fixed policies (not the original input) as the basis for the synthesized payloads.
+- The `CLI` shall use the auto-fixed policies (not the original input) as the basis for the synthesized payloads. This requires extending the Phase 3 `ValidateAndFixOrchestrator.execute()` return type to include the fixed `FormulationOutput` alongside the existing `ValidationOutput`, since the current implementation only returns validation results.
 
 ### Story 6: Output Modes
 
@@ -155,14 +160,16 @@ flowchart TD
     validateFix --> check{Errors remain?}
 
     check -->|Yes| fail["❌ Print validation\nerrors to stderr\nExit non-zero"]
-    check -->|No| resolve["Resolve Template\nVariables"]
+    check -->|No| discover["Discover Required Vars\nfrom template_variables"]
 
-    parseConfig --> resolveCheck{Template vars\nfound?}
-    resolveCheck -->|Yes| configCheck{Config has\nrequired fields?}
+    discover --> resolveCheck{Template vars\nfound?}
+    parseConfig --> resolveCheck
+
+    resolveCheck -->|Yes| configCheck{Config + resolved\ntemplate_variables\ncover all vars?}
     resolveCheck -->|No| transform
 
-    configCheck -->|Yes| resolve
-    configCheck -->|No| failConfig["❌ Print error:\nmissing config fields\nExit non-zero"]
+    configCheck -->|Yes| resolve["Resolve Template Vars\n(config overrides\ntemplate_variables)"]
+    configCheck -->|No| failConfig["❌ Print error:\nmissing config fields\n(list variable names)\nExit non-zero"]
 
     resolve --> transform["Transform to\nSDK Payloads"]
 
@@ -193,14 +200,14 @@ sequenceDiagram
     participant Resolver as TemplateResolver
     participant Synthesizer as SynthesizePayloads
 
-    User->>CLI: lousy-iam synthesize --input formulation.json --config config.json
+    User->>CLI: lousy-iam synthesize --input formulation-output.json --config config.json
     CLI->>CLI: Read files from disk
 
     CLI->>OutputParser: parse(formulationOutputJson)
     OutputParser-->>CLI: FormulationOutput
 
     CLI->>Orchestrator: validateAndFix(formulationOutput)
-    Orchestrator-->>CLI: ValidationOutput
+    Orchestrator-->>CLI: { validation: ValidationOutput, fixedOutput: FormulationOutput }
 
     alt Validation has errors
         CLI->>User: Print validation errors to stderr, exit 1
@@ -209,9 +216,11 @@ sequenceDiagram
     CLI->>ConfigParser: parse(configJson)
     ConfigParser-->>CLI: FormulationConfig
 
-    CLI->>Resolver: resolve(fixedPolicies, config)
-    alt Template vars found but config missing required fields
-        Resolver->>User: Print error explaining missing fields, exit 1
+    CLI->>Resolver: resolve(fixedPolicies, config, formulationOutput.template_variables)
+    Note over Resolver: Discover required vars from template_variables map
+    Note over Resolver: Precedence: config > resolved template_variables > error
+    alt Template vars found but neither config nor template_variables provides resolved values
+        Resolver->>User: Print error listing missing variable names, exit 1
     end
     Resolver-->>CLI: ResolvedFormulationOutput
 
@@ -240,7 +249,7 @@ sequenceDiagram
 | Use Case | SynthesisOutputSchema | `src/use-cases/synthesis-output.schema.ts` (new) | Zod schema for synthesis output validation |
 | Command | SynthesizeCommand | `src/commands/synthesize.ts` (new) | CLI command handler |
 | Root | index.ts | `src/index.ts` (modified) | Wire synthesize subcommand |
-| Use Case | ValidateAndFix | `src/use-cases/validate-and-fix.ts` (existing) | Reused internally for pre-synthesis validation |
+| Use Case | ValidateAndFix | `src/use-cases/validate-and-fix.ts` (modified) | Extended to return both `ValidationOutput` and fixed `FormulationOutput` for pre-synthesis validation |
 | Use Case | ParseFormulationOutput | `src/use-cases/parse-formulation-output.ts` (existing) | Reused for input parsing |
 | Use Case | ParseFormulationConfig | `src/use-cases/parse-formulation-config.ts` (existing) | Reused for config parsing |
 
@@ -250,8 +259,10 @@ sequenceDiagram
 2. **Template variable resolution as a separate use case**: Extracting template resolution into its own use case keeps the synthesizer focused on data transformation and allows template resolution to be tested independently.
 3. **Per-role output grouping**: Grouping payloads by role (rather than by operation type) maps naturally to how engineers deploy IAM resources — one role at a time — and simplifies directory output mode.
 4. **JSON-stringified policy documents**: `CreatePolicyCommand` and `CreateRoleCommand` accept policy documents as JSON strings (not objects). The synthesizer applies `JSON.stringify` during transformation, matching the exact AWS SDK v3 contract.
-5. **Predictable Policy ARN generation**: `AttachRolePolicyCommand` requires a `PolicyArn`. Since the policy hasn't been created yet at synthesis time, the synthesizer generates a deterministic ARN using `arn:{partition}:iam::{account_id}:policy{path}{policy_name}`, which is the ARN AWS will assign when the policy is created.
+5. **Predictable Policy ARN generation**: `AttachRolePolicyCommand` requires a `PolicyArn`. Since the policy hasn't been created yet at synthesis time, the synthesizer generates a deterministic ARN using `arn:{partition}:iam::{account_id}:policy{normalized_path}{policy_name}`, which is the ARN AWS will assign when the policy is created.
 6. **Partition resolution reuse**: The synthesizer reuses the existing `resolvePartition` logic (from `build-trust-policy.ts`) to derive the correct AWS partition from the config's region field. This function should be extracted to a shared utility in `src/lib/`.
+7. **Path normalization**: AWS IAM requires that `Path` values start and end with `/`, with `/` as the root. The synthesizer normalizes `role_path` before using it in `Path` fields and ARN generation. This prevents malformed ARNs such as `policy/deploymentmy-policy` when a path lacks a trailing slash. Normalization is applied once, early in the synthesis flow, and the normalized value is used consistently across `CreateRoleCommandInput.Path`, `CreatePolicyCommandInput.Path`, and `AttachRolePolicyCommandInput.PolicyArn`.
+8. **Template variable precedence and discovery**: The formulation output's `template_variables` map is the authoritative manifest of which placeholders exist. During resolution, config values take highest precedence, followed by resolved values already present in `template_variables` (validated by format — e.g., 12-digit string for `account_id`, AWS region pattern for `region`). Descriptive placeholder text (e.g., `"Target AWS account ID"`) is never used as a resolved value. This two-source strategy avoids requiring users to re-specify values that Phase 2 already resolved while ensuring config always wins on conflict.
 
 ### Dependencies
 
@@ -301,7 +312,7 @@ sequenceDiagram
 
 **Objective**: Implement a use case that replaces `${...}` template variable placeholders in the formulation output using values from the configuration file.
 
-**Context**: The formulation output may contain `${account_id}` placeholders in ARNs (OIDC provider ARNs, resource ARNs). The resolver must detect all placeholders, check that the config provides matching values, and replace them. If required values are missing, it must produce a descriptive error.
+**Context**: The formulation output contains a `template_variables` map that serves as the authoritative manifest of which `${...}` placeholders exist in generated policies. Values in this map may be actual resolved values (e.g., `"123456789012"`) or descriptive placeholders (e.g., `"Target AWS account ID"`). The resolver must: (1) use `template_variables` to discover which variables need resolution, (2) apply precedence (config > resolved template_variables values > error for descriptive-only placeholders), (3) validate that template_variables values look like real values before using them (e.g., 12-digit string for account_id, AWS region pattern for region), and (4) replace all `${...}` occurrences. If required values are missing from both sources, it must produce a descriptive error listing the missing variable names.
 
 **Affected files**:
 - `src/use-cases/resolve-template-variables.ts` (new)
@@ -314,7 +325,10 @@ sequenceDiagram
 - [ ] `npx biome check` passes
 - [ ] Template variables in OIDC provider ARNs are resolved
 - [ ] Template variables in resource ARNs are resolved
-- [ ] Missing config values produce descriptive errors
+- [ ] Config values take precedence over template_variables values
+- [ ] Resolved values in template_variables are used when config omits the variable
+- [ ] Descriptive placeholder values in template_variables are not used as resolved values
+- [ ] Missing config values produce descriptive errors listing variable names
 - [ ] Output with no template variables passes through unchanged
 
 ### Task 4: Create Synthesize Payloads Use Case
@@ -337,7 +351,10 @@ sequenceDiagram
 - [ ] `AttachRolePolicyCommandInput` payloads match AWS SDK v3 schema
 - [ ] `PolicyDocument` and `AssumeRolePolicyDocument` are JSON strings, not objects
 - [ ] `PermissionsBoundary` is omitted when null
-- [ ] `PolicyArn` follows the `arn:{partition}:iam::{account_id}:policy{path}{policy_name}` pattern
+- [ ] `PolicyArn` follows the `arn:{partition}:iam::{account_id}:policy{normalized_path}{policy_name}` pattern
+- [ ] `role_path` is normalized to start and end with `/` before use in `Path` and ARN fields
+- [ ] Root path `/` remains `/` after normalization
+- [ ] Paths missing leading or trailing `/` are corrected (e.g., `deployment` → `/deployment/`)
 
 ### Task 5: Create Synthesis Output Schema
 
