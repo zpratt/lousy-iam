@@ -1,9 +1,10 @@
 # Getting Started
 
-lousy-iam generates least-privilege AWS IAM policy documents from Terraform plan JSON. It works in two phases:
+lousy-iam generates least-privilege AWS IAM policy documents from Terraform plan JSON. It works in three phases:
 
 1. **Analyze** — Parse a Terraform plan and produce an action inventory of every IAM permission the deployment role needs.
 2. **Formulate** — Transform the action inventory into ready-to-use IAM trust and permission policy documents for GitHub Actions OIDC roles.
+3. **Validate** — Check the generated policies against 33 least-privilege security rules, auto-fix deterministic violations, and report remaining issues.
 
 The output is JSON policy documents you submit to your provisioning pipeline. lousy-iam does **not** create IAM roles directly in AWS.
 
