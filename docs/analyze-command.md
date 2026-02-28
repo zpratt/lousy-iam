@@ -141,7 +141,7 @@ The ARN placeholders (`${state_bucket}`, `${state_key_prefix}`, etc.) are templa
 When the analyze command encounters a resource type not in the action mapping database, it prints a warning:
 
 ```
-Unknown resource type: aws_sqs_queue (module.messaging.aws_sqs_queue.events) — add to action mapping database
+Unknown resource type: aws_elasticache_cluster (module.cache.aws_elasticache_cluster.main) — add to action mapping database
 ```
 
 The resource is skipped in the output. See [Action Mapping Database](./action-mapping-database.md) for the list of supported types and how to extend it.

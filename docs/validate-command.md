@@ -175,7 +175,7 @@ The validate command outputs JSON with validation results:
 | LP-041 | Error | ✅ | Statement lacks an explicit `Sid` |
 | LP-042 | Error | No | Policy document exceeds 6,144 bytes |
 | LP-043 | Warning | No | Statement contains more than 20 actions |
-| LP-044 | Warning | No | Role has more than 10 managed policies |
+| LP-044 | Warning | No | Policy document contains more than 10 statements |
 | LP-045 | Error | ✅ | Duplicate actions within a statement |
 | LP-046 | Warning | ✅ | Duplicate actions across statements |
 

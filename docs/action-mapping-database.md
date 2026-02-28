@@ -62,7 +62,7 @@ When the analyze command encounters a resource type not in the database, it:
 The warning message looks like:
 
 ```
-Unknown resource type: aws_sqs_queue (module.messaging.aws_sqs_queue.events) — add to action mapping database
+Unknown resource type: aws_elasticache_cluster (module.cache.aws_elasticache_cluster.main) — add to action mapping database
 ```
 
 ## Extending the Database
