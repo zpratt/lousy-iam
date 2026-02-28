@@ -32,6 +32,13 @@ The database currently includes mappings for the following AWS resource types:
 | `aws_cloudwatch_log_group` | CloudWatch Logs | Read, Create, Update, Delete, Tag |
 | `aws_route53_record` | Route 53 | Read, Create, Update, Delete |
 | `aws_db_instance` | RDS | Read, Create, Update, Delete, Tag |
+| `aws_dynamodb_table` | DynamoDB | Read, Create, Update, Delete, Tag |
+| `aws_kms_key` | KMS | Read, Create, Update, Delete, Tag |
+| `aws_kms_alias` | KMS | Read, Create, Update, Delete |
+| `aws_sns_topic` | SNS | Read, Create, Update, Delete, Tag |
+| `aws_sns_topic_subscription` | SNS | Read, Create, Update, Delete |
+| `aws_sqs_queue` | SQS | Read, Create, Update, Delete, Tag |
+| `aws_cloudwatch_metric_alarm` | CloudWatch | Read, Create, Update, Delete, Tag |
 
 ## Action Categories
 
@@ -55,7 +62,7 @@ When the analyze command encounters a resource type not in the database, it:
 The warning message looks like:
 
 ```
-Unknown resource type: aws_sqs_queue (module.messaging.aws_sqs_queue.events) — add to action mapping database
+Unknown resource type: aws_elasticache_cluster (module.cache.aws_elasticache_cluster.main) — add to action mapping database
 ```
 
 ## Extending the Database
