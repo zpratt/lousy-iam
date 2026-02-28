@@ -9,6 +9,8 @@ The formulate command requires a JSON configuration file. This document describe
   "github_org": "my-org",
   "github_repo": "infra-repo",
   "resource_prefix": "myteam",
+  "account_id": "123456789012",
+  "region": "us-east-1",
   "plan_apply_separation": true,
   "include_delete_actions": true,
   "use_github_environments": false,
@@ -31,6 +33,8 @@ The formulate command requires a JSON configuration file. This document describe
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
+| `account_id` | string or null | `null` | AWS account ID (12 digits). When provided, replaces `${account_id}` placeholder in trust policy OIDC ARNs with the actual value. |
+| `region` | string or null | `null` | AWS region identifier (e.g., `us-east-1`) or `*` for multi-region. When provided, records the actual region in `template_variables` output. Also determines the AWS partition for OIDC ARNs. |
 | `plan_apply_separation` | boolean | `true` | Generate separate plan and apply roles. When `false`, only the apply role is generated. |
 | `include_delete_actions` | boolean | `true` | Include delete-category IAM actions in the apply role. Set to `false` to prevent accidental resource destruction. |
 | `use_github_environments` | boolean | `false` | Use GitHub Environments for apply role trust scoping instead of branch-based scoping. |
@@ -46,6 +50,8 @@ The configuration is validated at runtime using the following rules:
 - `github_org` must match the pattern `^(?!-)(?!.*--)(?!.*-$)[A-Za-z0-9][A-Za-z0-9-]{0,38}$`
 - `github_repo` must match the pattern `^(?!\.)(?!.*\.\.)(?!.*\.$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}$`
 - `resource_prefix` must match the pattern `^[A-Za-z0-9_${}][A-Za-z0-9_\-${}]*$`
+- `account_id` must be exactly 12 digits (e.g., `123456789012`)
+- `region` must be a valid AWS region identifier (e.g., `us-east-1`) or `*` for multi-region
 - `max_session_duration` must be an integer between 900 and 43200
 
 Invalid configurations produce a descriptive error message.
@@ -77,6 +83,30 @@ These control how the apply role trust policy scopes the OIDC subject claim:
 
 When `false`, actions with category `delete` are excluded from the apply role's permission policies. Read, create, update, and tag actions are still included.
 
+### `account_id`
+
+When provided, the 12-digit AWS account ID replaces the `${account_id}` template placeholder in trust policy OIDC provider ARNs:
+
+| `account_id` | Trust Policy OIDC ARN |
+|--------------|----------------------|
+| `null` | `arn:aws:iam::${account_id}:oidc-provider/token.actions.githubusercontent.com` |
+| `"123456789012"` | `arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com` |
+
+The actual value is also recorded in the `template_variables` output.
+
+### `region`
+
+When provided, the region determines the AWS partition used in OIDC provider ARNs:
+
+| `region` | Partition | Example ARN Prefix |
+|----------|-----------|-------------------|
+| `null` or `*` | `aws` | `arn:aws:iam::...` |
+| `us-east-1` | `aws` | `arn:aws:iam::...` |
+| `us-gov-west-1` | `aws-us-gov` | `arn:aws-us-gov:iam::...` |
+| `cn-north-1` | `aws-cn` | `arn:aws-cn:iam::...` |
+
+The actual region value is recorded in the `template_variables` output when provided.
+
 ### `resource_prefix`
 
 Used as a prefix in generated names:
@@ -92,3 +122,4 @@ The configuration file must be valid JSON. Field names use `snake_case` to match
 
 - [Getting Started](./getting-started.md) — End-to-end workflow
 - [Formulate Command](./formulate-command.md) — How the config is used to generate policies
+- [Validate Command](./validate-command.md) — Phase 3 policy validation
