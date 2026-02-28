@@ -216,7 +216,7 @@ sequenceDiagram
     CLI->>ConfigParser: parse(configJson)
     ConfigParser-->>CLI: FormulationConfig
 
-    CLI->>Resolver: resolve(fixedPolicies, config, formulationOutput.template_variables)
+    CLI->>Resolver: resolve(fixedOutput, config, formulationOutput.template_variables)
     Note over Resolver: Discover required vars from template_variables map
     Note over Resolver: Precedence: config > resolved template_variables > error
     alt Template vars found but neither config nor template_variables provides resolved values
