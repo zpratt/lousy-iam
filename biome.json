@@ -66,12 +66,21 @@
                     }
                 }
             },
+            "complexity": {
+                "noExcessiveCognitiveComplexity": {
+                    "level": "error",
+                    "options": {
+                        "maxAllowedComplexity": 10
+                    }
+                }
+            },
             "performance": {
                 "noNamespaceImport": "error",
                 "noReExportAll": "error"
             },
             "suspicious": {
                 "noConsole": "warn",
+                "noExplicitAny": "error",
                 "noVar": "error"
             }
         }
