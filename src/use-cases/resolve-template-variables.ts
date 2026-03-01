@@ -62,6 +62,7 @@ export interface TemplateVariableResolver {
 }
 
 function buildResolutionMap(
+    input: string,
     templateVariables: Readonly<Record<string, string>>,
     config: FormulationConfig,
 ): { map: Map<string, string>; missing: string[] } {
@@ -69,6 +70,11 @@ function buildResolutionMap(
     const missing: string[] = [];
 
     for (const [key, templateValue] of Object.entries(templateVariables)) {
+        const placeholder = `\${${key}}`;
+        if (!input.includes(placeholder)) {
+            continue;
+        }
+
         const configValue = getConfigValue(config, key);
 
         if (configValue) {
@@ -105,6 +111,7 @@ export function createTemplateVariableResolver(): TemplateVariableResolver {
             config: FormulationConfig,
         ): TemplateResolutionOutcome {
             const { map, missing } = buildResolutionMap(
+                input,
                 templateVariables,
                 config,
             );

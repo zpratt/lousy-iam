@@ -237,4 +237,54 @@ describe("TemplateVariableResolver", () => {
             });
         });
     });
+
+    describe("given template_variables has extra keys not referenced in input", () => {
+        it("should ignore unreferenced keys and resolve successfully", () => {
+            // Arrange
+            const accountId = "123456789012";
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+            const input = "arn:aws:iam::${account_id}:role/test";
+            const templateVariables = {
+                account_id: "Target AWS account ID",
+                region: "Target AWS region",
+                resource_prefix: "myprefix",
+                org: "my-org",
+                repo: "my-repo",
+            };
+            const config = buildConfig({ accountId });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: `arn:aws:iam::${accountId}:role/test`,
+            });
+        });
+    });
+
+    describe("given template_variables has unresolvable keys but none are referenced in input", () => {
+        it("should resolve successfully without errors for unreferenced keys", () => {
+            // Arrange
+            const input = '{"key": "no-placeholders-here"}';
+            const templateVariables = {
+                account_id: "Target AWS account ID",
+                region: "Target AWS region",
+                resource_prefix: "myprefix",
+                org: "my-org",
+                repo: "my-repo",
+            };
+            const config = buildConfig({ accountId: null, region: null });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: input,
+            });
+        });
+    });
 });
