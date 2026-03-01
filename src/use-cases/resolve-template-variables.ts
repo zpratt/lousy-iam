@@ -9,6 +9,9 @@ const VALUE_VALIDATORS: Record<string, RegExp> = {
 };
 
 function isResolvedValue(key: string, value: string): boolean {
+    if (key === "region" && value === "*") {
+        return true;
+    }
     const pattern = VALUE_VALIDATORS[key];
     if (pattern) {
         return pattern.test(value);

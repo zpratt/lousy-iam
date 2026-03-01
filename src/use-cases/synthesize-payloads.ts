@@ -17,6 +17,8 @@ export interface PayloadSynthesizer {
     ): SynthesisOutput;
 }
 
+const AWS_ACCOUNT_ID_PATTERN = /^\d{12}$/;
+
 export function createPayloadSynthesizer(): PayloadSynthesizer {
     return {
         synthesize(
@@ -24,7 +26,23 @@ export function createPayloadSynthesizer(): PayloadSynthesizer {
             config: FormulationConfig,
         ): SynthesisOutput {
             const partition = resolvePartition(config.region);
-            const accountId = config.accountId ?? "";
+            const resolvedAccountId =
+                config.accountId ??
+                (typeof input.template_variables.account_id === "string" &&
+                AWS_ACCOUNT_ID_PATTERN.test(input.template_variables.account_id)
+                    ? input.template_variables.account_id
+                    : undefined);
+
+            if (
+                resolvedAccountId === undefined ||
+                !AWS_ACCOUNT_ID_PATTERN.test(resolvedAccountId)
+            ) {
+                throw new Error(
+                    "AWS account ID is required and must be a 12-digit string. Provide it in the config file or ensure template_variables.account_id contains a resolved 12-digit value.",
+                );
+            }
+
+            const accountId = resolvedAccountId;
 
             const roles: RoleSynthesis[] = input.roles.map((role) => {
                 const normalizedPath = normalizePath(role.role_path);

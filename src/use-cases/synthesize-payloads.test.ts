@@ -279,4 +279,48 @@ describe("SynthesizePayloads", () => {
             );
         });
     });
+
+    describe("given config.accountId is null but template_variables.account_id is a resolved 12-digit value", () => {
+        it("should fall back to template_variables.account_id for PolicyArn", () => {
+            // Arrange
+            const resolvedAccountId = "987654321012";
+            const input = buildFormulationOutput();
+            input.template_variables = { account_id: resolvedAccountId };
+            const config = buildConfig({ accountId: null });
+
+            // Act
+            const result = synthesizer.synthesize(input, config);
+
+            // Assert
+            expect(
+                result.roles[0]?.attach_role_policies[0]?.PolicyArn,
+            ).toContain(`:${resolvedAccountId}:`);
+        });
+    });
+
+    describe("given no valid account ID in config or template_variables", () => {
+        it("should throw an error when accountId is null and template_variables has descriptive placeholder", () => {
+            // Arrange
+            const input = buildFormulationOutput();
+            input.template_variables = { account_id: "Target AWS account ID" };
+            const config = buildConfig({ accountId: null });
+
+            // Act & Assert
+            expect(() => synthesizer.synthesize(input, config)).toThrow(
+                "AWS account ID is required and must be a 12-digit string",
+            );
+        });
+
+        it("should throw an error when accountId is null and template_variables is empty", () => {
+            // Arrange
+            const input = buildFormulationOutput();
+            input.template_variables = {};
+            const config = buildConfig({ accountId: null });
+
+            // Act & Assert
+            expect(() => synthesizer.synthesize(input, config)).toThrow(
+                "AWS account ID is required and must be a 12-digit string",
+            );
+        });
+    });
 });

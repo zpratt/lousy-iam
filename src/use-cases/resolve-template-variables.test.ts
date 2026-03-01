@@ -218,4 +218,23 @@ describe("TemplateVariableResolver", () => {
             });
         });
     });
+
+    describe("given template_variables has wildcard region '*' and config omits region", () => {
+        it("should treat '*' as a resolved value for region", () => {
+            // Arrange
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM placeholder for testing
+            const input = "arn:aws:s3:::bucket-${region}-*";
+            const templateVariables = { region: "*" };
+            const config = buildConfig({ region: null });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: "arn:aws:s3:::bucket-*-*",
+            });
+        });
+    });
 });

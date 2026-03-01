@@ -33,7 +33,7 @@ The formulate command requires a JSON configuration file. This document describe
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `account_id` | string or null | `null` | AWS account ID (12 digits). When provided, replaces `${account_id}` placeholder in trust policy OIDC ARNs with the actual value. **Required for the `synthesize` command** when formulation output contains `${account_id}` placeholders. |
+| `account_id` | string or null | `null` | AWS account ID (12 digits). When provided, replaces `${account_id}` placeholder in trust policy OIDC ARNs with the actual value. **Required for the `synthesize` command** to generate valid IAM Policy ARNs. |
 | `region` | string or null | `null` | AWS region identifier (e.g., `us-east-1`) or `*` for multi-region. When provided, records the actual region in `template_variables` output. Also determines the AWS partition for OIDC ARNs. |
 | `plan_apply_separation` | boolean | `true` | Generate separate plan and apply roles. When `false`, only the apply role is generated. |
 | `include_delete_actions` | boolean | `true` | Include delete-category IAM actions in the apply role. Set to `false` to prevent accidental resource destruction. |
