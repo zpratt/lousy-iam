@@ -61,6 +61,10 @@ export interface TemplateVariableResolver {
     ): TemplateResolutionOutcome;
 }
 
+function toPlaceholder(key: string): string {
+    return `\${${key}}`;
+}
+
 function buildResolutionMap(
     input: string,
     templateVariables: Readonly<Record<string, string>>,
@@ -70,8 +74,7 @@ function buildResolutionMap(
     const missing: string[] = [];
 
     for (const [key, templateValue] of Object.entries(templateVariables)) {
-        const placeholder = `\${${key}}`;
-        if (!input.includes(placeholder)) {
+        if (!input.includes(toPlaceholder(key))) {
             continue;
         }
 
@@ -95,7 +98,7 @@ function applyReplacements(
 ): string {
     let output = input;
     for (const [key, value] of resolutionMap) {
-        const placeholder = `\${${key}}`;
+        const placeholder = toPlaceholder(key);
         while (output.includes(placeholder)) {
             output = output.replace(placeholder, value);
         }
