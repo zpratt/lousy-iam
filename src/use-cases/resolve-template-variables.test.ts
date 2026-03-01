@@ -287,4 +287,62 @@ describe("TemplateVariableResolver", () => {
             });
         });
     });
+
+    describe("given input contains placeholder but templateVariables omits the key", () => {
+        it("should report the missing key", () => {
+            // Arrange
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+            const input = "arn:aws:iam::${account_id}:role/test";
+            const templateVariables = {};
+            const config = buildConfig({ accountId: null });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: false,
+                missingVariables: ["account_id"],
+            });
+        });
+
+        it("should resolve via config even when templateVariables omits the key", () => {
+            // Arrange
+            const accountId = "123456789012";
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+            const input = "arn:aws:iam::${account_id}:role/test";
+            const templateVariables = {};
+            const config = buildConfig({ accountId });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: `arn:aws:iam::${accountId}:role/test`,
+            });
+        });
+    });
+
+    describe("given a replacement value that contains the placeholder string", () => {
+        it("should not cause an infinite loop", () => {
+            // Arrange
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+            const input = "prefix-${region}-suffix";
+            const templateVariables = { region: "us-east-1" };
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: testing edge case where config contains placeholder text
+            const config = buildConfig({ region: "${region}-expanded" });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                // biome-ignore lint/suspicious/noTemplateCurlyInString: expected output contains literal placeholder text from config value
+                output: "prefix-${region}-expanded-suffix",
+            });
+        });
+    });
 });

@@ -65,6 +65,18 @@ function toPlaceholder(key: string): string {
     return `\${${key}}`;
 }
 
+const PLACEHOLDER_PATTERN = /\$\{([^}]+)\}/g;
+
+function discoverPlaceholderKeys(input: string): string[] {
+    const keys = new Set<string>();
+    for (const match of input.matchAll(PLACEHOLDER_PATTERN)) {
+        if (match[1] !== undefined) {
+            keys.add(match[1]);
+        }
+    }
+    return [...keys];
+}
+
 function buildResolutionMap(
     input: string,
     templateVariables: Readonly<Record<string, string>>,
@@ -73,17 +85,18 @@ function buildResolutionMap(
     const map = new Map<string, string>();
     const missing: string[] = [];
 
-    for (const [key, templateValue] of Object.entries(templateVariables)) {
-        if (!input.includes(toPlaceholder(key))) {
-            continue;
-        }
-
+    for (const key of discoverPlaceholderKeys(input)) {
         const configValue = getConfigValue(config, key);
 
         if (configValue) {
             map.set(key, configValue);
-        } else if (isResolvedValue(key, templateValue)) {
-            map.set(key, templateValue);
+        } else if (key in templateVariables) {
+            const templateValue = String(templateVariables[key]);
+            if (isResolvedValue(key, templateValue)) {
+                map.set(key, templateValue);
+            } else {
+                missing.push(key);
+            }
         } else {
             missing.push(key);
         }
@@ -99,9 +112,10 @@ function applyReplacements(
     let output = input;
     for (const [key, value] of resolutionMap) {
         const placeholder = toPlaceholder(key);
-        while (output.includes(placeholder)) {
-            output = output.replace(placeholder, value);
+        if (!output.includes(placeholder)) {
+            continue;
         }
+        output = output.split(placeholder).join(value);
     }
     return output;
 }
