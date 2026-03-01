@@ -1,3 +1,4 @@
+import { stripDangerousKeys } from "../entities/sanitize-json.js";
 import {
     type ActionInventoryInput,
     ActionInventoryInputSchema,
@@ -21,7 +22,9 @@ export function createActionInventoryParser(): ActionInventoryParser {
                 );
             }
 
-            return ActionInventoryInputSchema.parse(rawData);
+            return ActionInventoryInputSchema.parse(
+                stripDangerousKeys(rawData),
+            );
         },
     };
 }

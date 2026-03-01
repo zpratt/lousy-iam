@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import type { ActionInventoryMetadata } from "../entities/action-inventory.js";
+import { stripDangerousKeys } from "../entities/sanitize-json.js";
 import type {
     ResourceChange,
     TerraformPlan,
@@ -29,9 +30,11 @@ export function createTerraformPlanParser(): TerraformPlanParser {
                 throw new Error("Invalid JSON input");
             }
 
+            const sanitized = stripDangerousKeys(rawData);
+
             let plan: TerraformPlan;
             try {
-                plan = TerraformPlanSchema.parse(rawData);
+                plan = TerraformPlanSchema.parse(sanitized);
             } catch (error) {
                 if (error instanceof ZodError) {
                     const details = error.issues
