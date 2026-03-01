@@ -299,7 +299,7 @@ describe("SynthesizePayloads", () => {
     });
 
     describe("given no valid account ID in config or template_variables", () => {
-        it("should throw an error when accountId is null and template_variables has descriptive placeholder", () => {
+        it("should throw an error when template_variables.account_id is not a 12-digit string", () => {
             // Arrange
             const input = buildFormulationOutput();
             input.template_variables = { account_id: "Target AWS account ID" };
@@ -311,7 +311,7 @@ describe("SynthesizePayloads", () => {
             );
         });
 
-        it("should throw an error when accountId is null and template_variables is empty", () => {
+        it("should throw an error when template_variables.account_id is missing", () => {
             // Arrange
             const input = buildFormulationOutput();
             input.template_variables = {};

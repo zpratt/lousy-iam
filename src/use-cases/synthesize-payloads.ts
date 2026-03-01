@@ -33,10 +33,7 @@ export function createPayloadSynthesizer(): PayloadSynthesizer {
                     ? input.template_variables.account_id
                     : undefined);
 
-            if (
-                resolvedAccountId === undefined ||
-                !AWS_ACCOUNT_ID_PATTERN.test(resolvedAccountId)
-            ) {
+            if (resolvedAccountId === undefined) {
                 throw new Error(
                     "AWS account ID is required and must be a 12-digit string. Provide it in the config file or ensure template_variables.account_id contains a resolved 12-digit value.",
                 );
