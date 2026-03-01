@@ -55,4 +55,12 @@ describe("normalizePath", () => {
             );
         });
     });
+
+    describe("given a path with double dots in a segment name", () => {
+        it("should allow non-traversal double dots", () => {
+            const result = normalizePath("/team..ops/");
+
+            expect(result).toBe("/team..ops/");
+        });
+    });
 });

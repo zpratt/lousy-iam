@@ -1,10 +1,4 @@
-import {
-    cpSync,
-    mkdtempSync,
-    readFileSync,
-    rmSync,
-    writeFileSync,
-} from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,24 +19,13 @@ import {
     Wait,
 } from "testcontainers";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { createAnalyzeCommand } from "../../src/commands/analyze.js";
-import { createFormulateCommand } from "../../src/commands/formulate.js";
 import { createSynthesizeCommand } from "../../src/commands/synthesize.js";
 import type { SynthesisOutput } from "../../src/entities/synthesis-output.js";
-import { createActionMappingDb } from "../../src/gateways/action-mapping-db.js";
 import { UNSCOPED_ACTIONS } from "../../src/lib/unscoped-actions.js";
-import { createActionInventoryBuilder } from "../../src/use-cases/build-action-inventory.js";
-import { createPermissionPolicyBuilder } from "../../src/use-cases/build-permission-policy.js";
-import { createTrustPolicyBuilder } from "../../src/use-cases/build-trust-policy.js";
 import { createPolicyFixer } from "../../src/use-cases/fix-policy.js";
-import { createPolicyFormulator } from "../../src/use-cases/formulate-policies.js";
-import { createResourceActionMapper } from "../../src/use-cases/map-resource-actions.js";
-import { createActionInventoryParser } from "../../src/use-cases/parse-action-inventory.js";
 import { createFormulationConfigParser } from "../../src/use-cases/parse-formulation-config.js";
 import { createFormulationOutputParser } from "../../src/use-cases/parse-formulation-output.js";
-import { createTerraformPlanParser } from "../../src/use-cases/parse-terraform-plan.js";
 import { createTemplateVariableResolver } from "../../src/use-cases/resolve-template-variables.js";
-import { createActionInventorySerializer } from "../../src/use-cases/serialize-action-inventory.js";
 import { createPayloadSynthesizer } from "../../src/use-cases/synthesize-payloads.js";
 import { createValidateAndFixOrchestrator } from "../../src/use-cases/validate-and-fix.js";
 import { createPermissionPolicyValidator } from "../../src/use-cases/validate-permission-policy.js";
@@ -52,7 +35,6 @@ const FIXTURES_DIR = resolve(
     dirname(fileURLToPath(import.meta.url)),
     "fixtures",
 );
-const TERRAFORM_FIXTURES_DIR = resolve(FIXTURES_DIR, "terraform");
 const FORMULATION_FIXTURES_DIR = resolve(FIXTURES_DIR, "formulation");
 
 const MOTO_ACCOUNT_ID = "123456789012";
@@ -67,65 +49,6 @@ async function startMotoContainer(
         .withExposedPorts(5000)
         .withWaitStrategy(Wait.forHttp("/moto-api/", 5000).forStatusCode(200))
         .start();
-}
-
-async function runTerraformCommands(
-    container: StartedGenericContainer,
-): Promise<void> {
-    const initResult = await container.exec([
-        "terraform",
-        "init",
-        "-input=false",
-    ]);
-    if (initResult.exitCode !== 0) {
-        throw new Error(
-            `terraform init failed (exit ${initResult.exitCode}): ${initResult.output}`,
-        );
-    }
-
-    const planResult = await container.exec([
-        "terraform",
-        "plan",
-        "-input=false",
-        "-out=tfplan",
-    ]);
-    if (planResult.exitCode !== 0) {
-        throw new Error(
-            `terraform plan failed (exit ${planResult.exitCode}): ${planResult.output}`,
-        );
-    }
-
-    const showResult = await container.exec([
-        "sh",
-        "-c",
-        "terraform show -json tfplan > /workspace/plan.json",
-    ]);
-    if (showResult.exitCode !== 0) {
-        throw new Error(
-            `terraform show failed (exit ${showResult.exitCode}): ${showResult.output}`,
-        );
-    }
-}
-
-function buildAnalyzeCommand() {
-    const db = createActionMappingDb();
-    return createAnalyzeCommand({
-        parser: createTerraformPlanParser(),
-        mapper: createResourceActionMapper(db),
-        builder: createActionInventoryBuilder(),
-        serializer: createActionInventorySerializer(),
-    });
-}
-
-function buildFormulateCommand() {
-    return createFormulateCommand({
-        configParser: createFormulationConfigParser(),
-        inventoryParser: createActionInventoryParser(),
-        formulator: createPolicyFormulator({
-            permissionPolicyBuilder: createPermissionPolicyBuilder(),
-            trustPolicyBuilder: createTrustPolicyBuilder(),
-        }),
-    });
 }
 
 function buildSynthesizeCommand() {
@@ -211,79 +134,15 @@ describe("synthesize command e2e", () => {
         motoContainer = await startMotoContainer(network);
         motoEndpoint = `http://${motoContainer.getHost()}:${motoContainer.getMappedPort(5000)}`;
 
-        // Generate terraform plan using moto as AWS backend
-        const workDir = mkdtempSync(join(tmpdir(), "lousy-iam-synth-e2e-"));
-        cpSync(TERRAFORM_FIXTURES_DIR, workDir, { recursive: true });
-
-        const terraformContainer = await new GenericContainer(
-            "hashicorp/terraform:1.12.0",
-        )
-            .withNetwork(network)
-            .withBindMounts([{ source: workDir, target: "/workspace" }])
-            .withWorkingDir("/workspace")
-            .withEntrypoint(["sh"])
-            .withCommand(["-c", "tail -f /dev/null"])
-            .start();
-
         tempDir = mkdtempSync(join(tmpdir(), "lousy-iam-synth-"));
 
-        try {
-            await runTerraformCommands(terraformContainer);
-
-            const rawPlanPath = join(workDir, "plan.json");
-            const content = readFileSync(rawPlanPath, "utf-8");
-            if (!content.trim()) {
-                throw new Error("terraform show produced empty plan.json");
-            }
-
-            const planPath = join(tempDir, "plan.json");
-            cpSync(rawPlanPath, planPath);
-
-            // Phase 1: Analyze — produces action inventory from terraform plan
-            const analyzeCommand = buildAnalyzeCommand();
-            const analyzeOutput: string[] = [];
-            await analyzeCommand.execute(planPath, {
-                log: (msg) => analyzeOutput.push(msg),
-                warn: vi.fn(),
-            });
-
-            const inventoryPath = join(tempDir, "action-inventory.json");
-            writeFileSync(inventoryPath, analyzeOutput[0] ?? "", "utf-8");
-
-            // Phase 2: Formulate — produces candidate IAM policies
-            const formulateCommand = buildFormulateCommand();
-            const configPath = join(tempDir, "config.json");
-            writeFileSync(configPath, buildFormulationConfig(), "utf-8");
-
-            const formulateOutput: string[] = [];
-            await formulateCommand.execute(inventoryPath, configPath, {
-                log: (msg) => formulateOutput.push(msg),
-                warn: vi.fn(),
-            });
-
-            writeFileSync(
-                join(tempDir, "formulation-output.json"),
-                formulateOutput[0] ?? "",
-                "utf-8",
-            );
-        } finally {
-            await terraformContainer.stop();
-            try {
-                rmSync(workDir, { recursive: true, force: true });
-            } catch {
-                // Terraform container creates root-owned files in bind mount
-            }
-        }
-
-        // Phase 4: Synthesize — uses pre-validated fixture with scoped resources
-        // Real formulation output may contain validation errors (e.g. Resource: "*")
-        // that require manual remediation before synthesis. This fixture represents
-        // a formulation output that has been reviewed and scoped appropriately.
         const synthesizeFixturePath = resolve(
             FORMULATION_FIXTURES_DIR,
             "synthesize-ready-output.json",
         );
         const configPath = join(tempDir, "config.json");
+        writeFileSync(configPath, buildFormulationConfig(), "utf-8");
+
         const synthesizeCommand = buildSynthesizeCommand();
         synthesisOutput = await synthesizeCommand.execute(
             {
@@ -310,7 +169,7 @@ describe("synthesize command e2e", () => {
         }
     });
 
-    describe("given the full pipeline from analyze through synthesize", () => {
+    describe("given synthesized payloads from a pre-validated fixture", () => {
         it("should produce a plan and apply role", () => {
             expect(synthesisOutput.roles).toHaveLength(2);
             expect(synthesisOutput.roles[0]?.create_role.RoleName).toBe(
@@ -357,12 +216,10 @@ describe("synthesize command e2e", () => {
         it("should create roles, policies, and attachments then verify via GetRole and ListAttachedRolePolicies", async () => {
             const iamClient = createIamClient(motoEndpoint);
 
-            // Provision all roles in moto
             for (const role of synthesisOutput.roles) {
                 await provisionRole(iamClient, role);
             }
 
-            // Verify all roles and their policy attachments
             for (const role of synthesisOutput.roles) {
                 const result = await verifyRole(iamClient, role);
                 expect(result.roleName).toBe(role.create_role.RoleName);
