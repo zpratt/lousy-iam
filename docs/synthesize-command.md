@@ -167,14 +167,14 @@ payloads/
 
 ## Configuration Requirements
 
-The `synthesize` command requires certain configuration fields to resolve template variables:
+The `synthesize` command requires that certain template variables can be resolved from either the formulation configuration or from already-resolved values in the formulation output (`template_variables`):
 
-| Config Field | When Required |
-|-------------|---------------|
-| `account_id` | When formulation output contains `${account_id}` placeholders |
-| `region` | When formulation output contains `${region}` placeholders |
+| Variable | When Required | Accepted Sources |
+|----------|---------------|------------------|
+| `account_id` | When formulation output contains `${account_id}` placeholders | Config `account_id` field or `template_variables.account_id` in formulation output |
+| `region` | When formulation output contains `${region}` placeholders | Config `region` field or `template_variables.region` in formulation output |
 
-If the formulation output contains template variable placeholders and the config does not provide the required values, the command exits with a descriptive error listing the missing variable names.
+If the formulation output contains template variable placeholders and neither the config nor the formulation output `template_variables` provides values for all referenced variables, the command exits with a descriptive error listing the missing variable names.
 
 ## End-to-End Example
 

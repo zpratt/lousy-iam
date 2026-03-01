@@ -70,7 +70,7 @@ function resolveTemplateVariables(
 
     if (!resolution.resolved) {
         throw new Error(
-            `Missing required template variables in config: ${resolution.missingVariables.join(", ")}. Add these values to your config file.`,
+            `Missing required template variables: ${resolution.missingVariables.join(", ")}. Provide values for these variables in your formulation config or in the 'template_variables' of your formulation output.`,
         );
     }
 
