@@ -49,7 +49,17 @@ export function createFormulationConfigParser(): FormulationConfigParser {
                 );
             }
 
-            const sanitized = stripDangerousKeys(rawData);
+            let sanitized: unknown;
+            try {
+                sanitized = stripDangerousKeys(rawData);
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                throw new Error(
+                    `Invalid JSON: configuration file could not be sanitized (${message})`,
+                );
+            }
+
             const transformed = transformSnakeToCamel(sanitized);
             return FormulationConfigSchema.parse(transformed);
         },

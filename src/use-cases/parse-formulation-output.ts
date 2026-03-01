@@ -12,7 +12,18 @@ export function createFormulationOutputParser(): FormulationOutputParser {
     return {
         parse(content: string): FormulationOutputInput {
             const raw: unknown = JSON.parse(content);
-            const data = stripDangerousKeys(raw);
+
+            let data: unknown;
+            try {
+                data = stripDangerousKeys(raw);
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                throw new Error(
+                    `Invalid JSON: formulation output could not be sanitized (${message})`,
+                );
+            }
+
             return FormulationOutputSchema.parse(data);
         },
     };

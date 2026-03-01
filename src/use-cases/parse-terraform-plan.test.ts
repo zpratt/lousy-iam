@@ -112,6 +112,12 @@ describe("ParseTerraformPlan", () => {
             // Assert
             expect(result.resourceChanges).toHaveLength(1);
             expect(result.resourceChanges[0]?.type).toBe("aws_s3_bucket");
+            const after = result.resourceChanges[0]?.change.after as Record<
+                string,
+                unknown
+            > | null;
+            expect(after).not.toBeNull();
+            expect(Object.keys(after ?? {}).includes("__proto__")).toBe(false);
         });
     });
 });

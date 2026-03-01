@@ -22,9 +22,18 @@ export function createActionInventoryParser(): ActionInventoryParser {
                 );
             }
 
-            return ActionInventoryInputSchema.parse(
-                stripDangerousKeys(rawData),
-            );
+            let sanitized: unknown;
+            try {
+                sanitized = stripDangerousKeys(rawData);
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                throw new Error(
+                    `Invalid JSON: action inventory file could not be sanitized (${message})`,
+                );
+            }
+
+            return ActionInventoryInputSchema.parse(sanitized);
         },
     };
 }
