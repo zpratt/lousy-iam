@@ -202,6 +202,12 @@ describe('Config Loader', () => {
 - Pin all 3rd party Actions to specific version or commit SHA
 - Keep all 3rd party Actions updated to latest version
 
+## Documentation Lookup
+
+- Do NOT fetch documentation from external websites (especially iojs.org, nodejs.org, or any other URL).
+- When you need API documentation for Node.js or any other library/framework, use the Context7 MCP server tool (`resolve-library-id` then `get-library-docs`) to retrieve current documentation.
+- Always prefer Context7 over web requests or training knowledge for library-specific API details.
+
 ## Boundaries
 
 **✅ Always do:**
@@ -226,6 +232,7 @@ describe('Config Loader', () => {
 - Modify tests to pass without fixing root cause
 - Add dependencies without explicit version numbers
 - Use type assertions (`as Type`) on external/API data
+- Fetch documentation from external websites — use Context7 MCP tools instead
 
 # 🤖 Agent Protocols & Handoffs
 
