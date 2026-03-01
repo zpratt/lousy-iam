@@ -5,7 +5,7 @@ const CreateRolePayloadSchema = z.object({
     AssumeRolePolicyDocument: z.string().min(1),
     Path: z.string().startsWith("/").endsWith("/"),
     Description: z.string(),
-    MaxSessionDuration: z.number().int().min(900).max(43200),
+    MaxSessionDuration: z.number().int().min(3600).max(43200),
     PermissionsBoundary: z.string().optional(),
 });
 

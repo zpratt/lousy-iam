@@ -195,7 +195,7 @@ describe("FormulationConfigSchema", () => {
     });
 
     describe("given a config with invalid max_session_duration", () => {
-        it("should reject when below minimum (900)", () => {
+        it("should reject when below minimum (3600)", () => {
             const input = {
                 githubOrg: chance.word(),
                 githubRepo: chance.word(),

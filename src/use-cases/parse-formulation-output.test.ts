@@ -78,7 +78,9 @@ describe("ParseFormulationOutput", () => {
         it("should throw on malformed JSON", () => {
             const parser = createFormulationOutputParser();
 
-            expect(() => parser.parse("{not valid")).toThrow();
+            expect(() => parser.parse("{not valid")).toThrow(
+                "Invalid JSON: formulation output is not valid JSON",
+            );
         });
 
         it("should throw on missing required fields", () => {

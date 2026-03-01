@@ -11,7 +11,14 @@ export interface FormulationOutputParser {
 export function createFormulationOutputParser(): FormulationOutputParser {
     return {
         parse(content: string): FormulationOutputInput {
-            const raw: unknown = JSON.parse(content);
+            let raw: unknown;
+            try {
+                raw = JSON.parse(content);
+            } catch {
+                throw new Error(
+                    "Invalid JSON: formulation output is not valid JSON",
+                );
+            }
 
             let data: unknown;
             try {
