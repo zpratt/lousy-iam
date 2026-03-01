@@ -1,5 +1,6 @@
 import type { FormulationConfig } from "../entities/formulation-config.js";
 import type { TrustPolicyDocument } from "../entities/policy-document.js";
+import { resolvePartition } from "../lib/resolve-partition.js";
 
 export interface TrustPolicyBuilder {
     buildPlanTrust(config: FormulationConfig): TrustPolicyDocument;
@@ -12,19 +13,6 @@ const OIDC_ACCOUNT_ID_PLACEHOLDER =
 const OIDC_AUD_KEY = "token.actions.githubusercontent.com:aud";
 const OIDC_SUB_KEY = "token.actions.githubusercontent.com:sub";
 const AUDIENCE_VALUE = "sts.amazonaws.com";
-
-function resolvePartition(region: string | null): string {
-    if (!region || region === "*") {
-        return "aws";
-    }
-    if (region.startsWith("us-gov-")) {
-        return "aws-us-gov";
-    }
-    if (region.startsWith("cn-")) {
-        return "aws-cn";
-    }
-    return "aws";
-}
 
 function resolveOidcProviderArn(config: FormulationConfig): string {
     const partition = resolvePartition(config.region);
