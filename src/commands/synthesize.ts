@@ -56,6 +56,17 @@ function hasValidationWarnings(validation: ValidationOutput): boolean {
     );
 }
 
+const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+function assertSafeObjectKey(key: string): void {
+    if (DANGEROUS_KEYS.has(key)) {
+        throw new Error(
+            `Resolved template variable produced an unsafe object key: "${key}". ` +
+                "Template variables must not resolve to special property names.",
+        );
+    }
+}
+
 function resolveTemplateVariables(
     deps: SynthesizeCommandDeps,
     fixedOutput: FormulationOutputInput,
@@ -91,10 +102,11 @@ function resolveTemplateVariables(
         }
 
         if (value !== null && typeof value === "object") {
-            const result: Record<string, unknown> = {};
+            const result: Record<string, unknown> = Object.create(null);
 
             for (const [key, val] of Object.entries(value)) {
                 const resolvedKey = resolveString(key);
+                assertSafeObjectKey(resolvedKey);
                 result[resolvedKey] = resolveValue(val);
             }
 

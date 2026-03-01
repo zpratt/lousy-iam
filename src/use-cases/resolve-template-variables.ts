@@ -12,9 +12,8 @@ function isResolvedValue(key: string, value: string): boolean {
     if (key === "region" && value === "*") {
         return true;
     }
-    const pattern = VALUE_VALIDATORS[key];
-    if (pattern) {
-        return pattern.test(value);
+    if (Object.hasOwn(VALUE_VALIDATORS, key)) {
+        return VALUE_VALIDATORS[key]?.test(value) ?? false;
     }
     return true;
 }
@@ -94,7 +93,7 @@ function buildResolutionMap(
 
         if (configValue) {
             map.set(key, configValue);
-        } else if (key in templateVariables) {
+        } else if (Object.hasOwn(templateVariables, key)) {
             const templateValue = String(templateVariables[key]);
             if (isResolvedValue(key, templateValue)) {
                 map.set(key, templateValue);

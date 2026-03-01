@@ -443,6 +443,83 @@ describe("SynthesizeCommand", () => {
         });
     });
 
+    describe("given a template variable that resolves to a dangerous object key", () => {
+        it("should throw an error rejecting the unsafe key", async () => {
+            // Arrange
+            const prefix = chance.word();
+            const inputJson = JSON.stringify({
+                roles: [
+                    {
+                        role_name: `${prefix}-github-apply`,
+                        role_path: "/",
+                        description: chance.sentence(),
+                        max_session_duration: 3600,
+                        permission_boundary_arn: null,
+                        trust_policy: {
+                            Version: "2012-10-17",
+                            Statement: [
+                                {
+                                    Sid: "AllowGitHubOIDC",
+                                    Effect: "Allow",
+                                    Principal: {
+                                        Federated:
+                                            "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
+                                    },
+                                    Action: "sts:AssumeRoleWithWebIdentity",
+                                    Condition: {
+                                        StringEquals: {
+                                            "token.actions.githubusercontent.com:aud":
+                                                "sts.amazonaws.com",
+                                            "${evil_key}": "evil-value",
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                        permission_policies: [
+                            {
+                                policy_name: `${prefix}-permissions`,
+                                policy_document: {
+                                    Version: "2012-10-17",
+                                    Statement: [
+                                        {
+                                            Sid: "S3Read",
+                                            Effect: "Allow",
+                                            Action: ["s3:GetBucketLocation"],
+                                            Resource: `arn:aws:s3:::${prefix}-*`,
+                                        },
+                                    ],
+                                },
+                                estimated_size_bytes: 256,
+                            },
+                        ],
+                    },
+                ],
+                template_variables: {
+                    evil_key: "descriptive placeholder",
+                },
+            });
+            const configJson = buildConfigJson({
+                template_variables: { evil_key: "__proto__" },
+            });
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inputJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const mockConsole = buildMockConsole();
+
+            // Act & Assert
+            await expect(
+                command.execute(
+                    { inputPath: "input.json", configPath: "config.json" },
+                    mockConsole,
+                ),
+            ).rejects.toThrow("unsafe object key");
+        });
+    });
+
     describe("given synthesized output fails schema validation", () => {
         it("should throw a validation error", async () => {
             // Arrange

@@ -405,6 +405,45 @@ describe("TemplateVariableResolver", () => {
         });
     });
 
+    describe("given input with a placeholder matching a prototype property name", () => {
+        it("should treat prototype properties as missing when not own properties", () => {
+            // Arrange
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: testing prototype pollution edge case
+            const input = "prefix-${toString}-suffix";
+            const templateVariables: Record<string, string> = {};
+            const config = buildConfig();
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: false,
+                missingVariables: ["toString"],
+            });
+        });
+
+        it("should resolve own properties that shadow prototype names", () => {
+            // Arrange
+            const value = chance.word();
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: testing prototype pollution edge case
+            const input = "prefix-${toString}-suffix";
+            const templateVariables: Record<string, string> = {
+                toString: value,
+            };
+            const config = buildConfig();
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: `prefix-${value}-suffix`,
+            });
+        });
+    });
+
     describe("given a replacement value that contains the placeholder string", () => {
         it("should not cause an infinite loop", () => {
             // Arrange
