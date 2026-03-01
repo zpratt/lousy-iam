@@ -115,7 +115,7 @@ function applyReplacements(
         if (!output.includes(placeholder)) {
             continue;
         }
-        output = output.split(placeholder).join(value);
+        output = output.replaceAll(placeholder, value);
     }
     return output;
 }

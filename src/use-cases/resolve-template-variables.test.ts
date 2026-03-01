@@ -32,7 +32,7 @@ describe("TemplateVariableResolver", () => {
         it("should return input unchanged", () => {
             // Arrange
             const input = '{"key": "value"}';
-            const templateVariables = {};
+            const templateVariables: Record<string, string> = {};
             const config = buildConfig();
 
             // Act
@@ -293,7 +293,7 @@ describe("TemplateVariableResolver", () => {
             // Arrange
             // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
             const input = "arn:aws:iam::${account_id}:role/test";
-            const templateVariables = {};
+            const templateVariables: Record<string, string> = {};
             const config = buildConfig({ accountId: null });
 
             // Act
@@ -311,7 +311,7 @@ describe("TemplateVariableResolver", () => {
             const accountId = "123456789012";
             // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
             const input = "arn:aws:iam::${account_id}:role/test";
-            const templateVariables = {};
+            const templateVariables: Record<string, string> = {};
             const config = buildConfig({ accountId });
 
             // Act
