@@ -98,4 +98,26 @@ describe("ParseTerraformPlan", () => {
             );
         });
     });
+
+    describe("given JSON with prototype pollution keys", () => {
+        it("should strip __proto__ keys from resource change data", () => {
+            // Arrange
+            const parser = createTerraformPlanParser();
+            const planWithProto =
+                '{"format_version":"1.2","terraform_version":"1.7.0","resource_changes":[{"address":"aws_s3_bucket.main","type":"aws_s3_bucket","provider_name":"registry.terraform.io/hashicorp/aws","change":{"actions":["create"],"before":null,"after":{"bucket":"test","__proto__":{"isAdmin":true}}},"__proto__":{"isAdmin":true}}]}';
+
+            // Act
+            const result = parser.parse(planWithProto);
+
+            // Assert
+            expect(result.resourceChanges).toHaveLength(1);
+            expect(result.resourceChanges[0]?.type).toBe("aws_s3_bucket");
+            const after = result.resourceChanges[0]?.change.after as Record<
+                string,
+                unknown
+            > | null;
+            expect(after).not.toBeNull();
+            expect(Object.keys(after ?? {}).includes("__proto__")).toBe(false);
+        });
+    });
 });

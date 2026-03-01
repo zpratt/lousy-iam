@@ -1,4 +1,5 @@
 import type { FormulationConfig } from "../entities/formulation-config.js";
+import { stripDangerousKeys } from "../entities/sanitize-json.js";
 import { FormulationConfigSchema } from "./formulation-config.schema.js";
 
 export interface FormulationConfigParser {
@@ -28,13 +29,6 @@ function transformSnakeToCamel(data: unknown): unknown {
 
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
-        if (
-            key === "__proto__" ||
-            key === "constructor" ||
-            key === "prototype"
-        ) {
-            continue;
-        }
         const camelKey = keyMap[key] ?? key;
         result[camelKey] = value;
     }
@@ -55,7 +49,18 @@ export function createFormulationConfigParser(): FormulationConfigParser {
                 );
             }
 
-            const transformed = transformSnakeToCamel(rawData);
+            let sanitized: unknown;
+            try {
+                sanitized = stripDangerousKeys(rawData);
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                throw new Error(
+                    `Invalid JSON: configuration file could not be sanitized (${message})`,
+                );
+            }
+
+            const transformed = transformSnakeToCamel(sanitized);
             return FormulationConfigSchema.parse(transformed);
         },
     };
