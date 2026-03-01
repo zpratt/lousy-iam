@@ -102,6 +102,8 @@ lousy-iam validate --input roles.json > validation-results.json
 
 Review the results to ensure `valid` is `true`. If violations remain, the output includes rule IDs, severity levels, and fix hints. See [Validate Command](./validate-command.md) for details.
 
+> **Note:** The `synthesize` command (Step 6) runs validation internally, so this step is optional. Running validate first is recommended when you want to review and understand any violations before attempting synthesis.
+
 ### Step 6: Synthesize AWS SDK v3 Payloads
 
 Run the `synthesize` command to transform the validated policies into deployment-ready AWS SDK v3 payloads:

@@ -1,6 +1,6 @@
 # Synthesize Command
 
-The `synthesize` command is Phase 4 of lousy-iam. It transforms validated IAM policy documents (output of `formulate`) into AWS SDK v3 payloads ready for use with `@aws-sdk/client-iam`. The command runs validation internally, resolves template variables, and produces `CreateRoleCommandInput`, `CreatePolicyCommandInput`, and `AttachRolePolicyCommandInput` payloads.
+The `synthesize` command is Phase 4 of lousy-iam. It runs validation internally, resolves template variables, and transforms the formulation output into AWS SDK v3 payloads — `CreateRoleCommandInput`, `CreatePolicyCommandInput`, and `AttachRolePolicyCommandInput` — ready to pass directly to `@aws-sdk/client-iam`.
 
 ## Usage
 
@@ -21,7 +21,7 @@ lousy-iam synthesize --input <formulation-output-json> --config <config-json>
 
 ## How It Works
 
-The synthesize command processes input through five steps:
+The synthesize command processes input through four steps:
 
 ### 1. Parse the Formulation Output
 
@@ -29,19 +29,19 @@ The command reads the Phase 2 output JSON file containing role definitions with 
 
 ### 2. Validate and Auto-Fix
 
-The command runs the Phase 3 validate-and-fix orchestrator internally. This ensures only valid, auto-fixed policies are synthesized into deployment-ready payloads — even if the user skips the standalone `validate` command.
+The command runs the Phase 3 validate-and-fix orchestrator internally. This ensures only valid, auto-fixed policies are synthesized into deployment-ready payloads — even if you skip the standalone `validate` command.
 
 - If validation finds **errors** that cannot be auto-fixed, the command prints validation results to stderr and exits with a non-zero exit code.
 - If validation finds only **warnings** (no errors), the command proceeds with synthesis and logs the warnings to stderr.
 
 ### 3. Resolve Template Variables
 
-The command uses the formulation output's `template_variables` map to discover which `${...}` placeholders exist in the generated policies. Values are resolved using the following precedence (highest to lowest):
+The command scans the generated policy documents for `${...}` placeholders to determine which variables need to be resolved. Values are resolved using the following precedence (highest to lowest):
 
 1. Values from the `--config` file
-2. Resolved values already present in `template_variables` (validated by format — e.g., 12-digit string for `account_id`, AWS region pattern for `region`)
+2. Already-resolved values in `template_variables` (validated by format — e.g., 12-digit string for `account_id`, AWS region pattern for `region`)
 
-Descriptive placeholder text (e.g., `"Target AWS account ID"`) is never used as a resolved value. If required variables are missing from both sources, the command prints an error listing the missing variable names and exits with a non-zero exit code.
+Descriptive placeholder text (e.g., `"Target AWS account ID"`) is never treated as a resolved value. If required variables cannot be resolved from either source, the command prints an error listing the missing variable names and exits with a non-zero exit code.
 
 ### 4. Transform to SDK Payloads
 
@@ -51,9 +51,7 @@ The command transforms the resolved formulation output into AWS SDK v3 payloads 
 - **CreatePolicyCommandInput** — One per permission policy, with `PolicyDocument` as a JSON string
 - **AttachRolePolicyCommandInput** — One per role-policy pair, with a deterministic `PolicyArn`
 
-### 5. Output
-
-By default, the synthesized JSON is written to stdout. Use `--output` to write to a single file, or `--output-dir` to write per-role JSON files.
+Output is written to stdout by default. See [Output Modes](#output-modes) for alternatives.
 
 ## Output Format
 
@@ -179,14 +177,14 @@ If the formulation output contains template variable placeholders and neither th
 ## End-to-End Example
 
 ```bash
-# Generate formulation output from Phase 1 + Phase 2
+# Analyze and formulate (Phases 1–2)
 lousy-iam analyze --input plan.json > action-inventory.json
 lousy-iam formulate --input action-inventory.json --config config.json > roles.json
 
-# Synthesize into AWS SDK v3 payloads
+# Synthesize into AWS SDK v3 payloads (single file)
 lousy-iam synthesize --input roles.json --config config.json > sdk-payloads.json
 
-# Or write per-role files
+# Alternative: write per-role files
 lousy-iam synthesize --input roles.json --config config.json --output-dir ./payloads/
 ```
 
