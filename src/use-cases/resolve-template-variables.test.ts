@@ -325,6 +325,33 @@ describe("TemplateVariableResolver", () => {
         });
     });
 
+    describe("given template_variables has user-defined keys not in the validator map", () => {
+        it("should treat user-defined values as resolved for keys without validators", () => {
+            // Arrange
+            const bucketName = chance.word();
+            const keyPrefix = chance.word();
+            const lockTable = chance.word();
+            const input =
+                // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+                "arn:aws:s3:::${state_bucket}/${state_key_prefix}* arn:aws:dynamodb:us-east-1:123456789012:table/${lock_table}";
+            const templateVariables = {
+                state_bucket: bucketName,
+                state_key_prefix: keyPrefix,
+                lock_table: lockTable,
+            };
+            const config = buildConfig();
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: `arn:aws:s3:::${bucketName}/${keyPrefix}* arn:aws:dynamodb:us-east-1:123456789012:table/${lockTable}`,
+            });
+        });
+    });
+
     describe("given a replacement value that contains the placeholder string", () => {
         it("should not cause an infinite loop", () => {
             // Arrange

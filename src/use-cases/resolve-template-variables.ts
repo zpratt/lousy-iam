@@ -16,7 +16,7 @@ function isResolvedValue(key: string, value: string): boolean {
     if (pattern) {
         return pattern.test(value);
     }
-    return false;
+    return true;
 }
 
 const CONFIG_KEY_MAP: Record<string, keyof FormulationConfig> = {

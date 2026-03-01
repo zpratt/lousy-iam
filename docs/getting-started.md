@@ -133,8 +133,10 @@ See [Synthesize Command](./synthesize-command.md) for full details.
 Use the synthesized payloads with the AWS JavaScript SDK v3 to create IAM resources:
 
 ```javascript
+import { readFile } from "node:fs/promises";
 import { IAMClient, CreateRoleCommand, CreatePolicyCommand, AttachRolePolicyCommand } from "@aws-sdk/client-iam";
-import payloads from "./sdk-payloads.json";
+
+const payloads = JSON.parse(await readFile("./sdk-payloads.json", "utf-8"));
 
 const client = new IAMClient({});
 
