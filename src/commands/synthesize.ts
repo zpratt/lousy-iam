@@ -9,6 +9,7 @@ import type { FormulationOutputInput } from "../use-cases/formulation-output.sch
 import type { FormulationConfigParser } from "../use-cases/parse-formulation-config.js";
 import type { FormulationOutputParser } from "../use-cases/parse-formulation-output.js";
 import type { TemplateVariableResolver } from "../use-cases/resolve-template-variables.js";
+import { SynthesisOutputSchema } from "../use-cases/synthesis-output.schema.js";
 import type { PayloadSynthesizer } from "../use-cases/synthesize-payloads.js";
 import type { ValidateAndFixOrchestrator } from "../use-cases/validate-and-fix.js";
 
@@ -61,20 +62,58 @@ function resolveTemplateVariables(
     templateVariables: Readonly<Record<string, string>>,
     config: FormulationConfig,
 ): FormulationOutputInput {
-    const serialized = JSON.stringify(fixedOutput);
-    const resolution = deps.resolver.resolve(
-        serialized,
-        templateVariables,
-        config,
-    );
+    const missingVariables = new Set<string>();
 
-    if (!resolution.resolved) {
+    const resolveString = (value: string): string => {
+        const resolution = deps.resolver.resolve(
+            value,
+            templateVariables,
+            config,
+        );
+
+        if (!resolution.resolved) {
+            for (const variable of resolution.missingVariables) {
+                missingVariables.add(variable);
+            }
+            return value;
+        }
+
+        return resolution.output;
+    };
+
+    const resolveValue = (value: unknown): unknown => {
+        if (typeof value === "string") {
+            return resolveString(value);
+        }
+
+        if (Array.isArray(value)) {
+            return value.map((item) => resolveValue(item));
+        }
+
+        if (value !== null && typeof value === "object") {
+            const result: Record<string, unknown> = {};
+
+            for (const [key, val] of Object.entries(value)) {
+                const resolvedKey = resolveString(key);
+                result[resolvedKey] = resolveValue(val);
+            }
+
+            return result;
+        }
+
+        return value;
+    };
+
+    const resolvedOutput = resolveValue(fixedOutput) as FormulationOutputInput;
+
+    if (missingVariables.size > 0) {
         throw new Error(
-            `Missing required template variables: ${resolution.missingVariables.join(", ")}. Provide values for these variables in your formulation config or in the 'template_variables' of your formulation output.`,
+            `Missing required template variables: ${Array.from(missingVariables).join(", ")}. Provide values for these variables in your formulation config or in the 'template_variables' of your formulation output.`,
         );
     }
 
-    return deps.parser.parse(resolution.output);
+    const serialized = JSON.stringify(resolvedOutput);
+    return deps.parser.parse(serialized);
 }
 
 async function writeOutput(
@@ -150,6 +189,8 @@ export function createSynthesizeCommand(
                 resolvedOutput,
                 config,
             );
+
+            SynthesisOutputSchema.parse(synthesisResult);
 
             await writeOutput(synthesisResult, options, output);
 

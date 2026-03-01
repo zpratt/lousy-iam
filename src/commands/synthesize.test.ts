@@ -360,6 +360,150 @@ describe("SynthesizeCommand", () => {
         });
     });
 
+    describe("given a template variable value containing JSON special characters", () => {
+        it("should resolve without producing invalid JSON", async () => {
+            // Arrange
+            const prefix = chance.word();
+            const inputJson = JSON.stringify({
+                roles: [
+                    {
+                        role_name: `${prefix}-github-apply`,
+                        role_path: "/",
+                        // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM template placeholder under test
+                        description: "role for ${custom_var}",
+                        max_session_duration: 3600,
+                        permission_boundary_arn: null,
+                        trust_policy: {
+                            Version: "2012-10-17",
+                            Statement: [
+                                {
+                                    Sid: "AllowGitHubOIDC",
+                                    Effect: "Allow",
+                                    Principal: {
+                                        Federated:
+                                            "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
+                                    },
+                                    Action: "sts:AssumeRoleWithWebIdentity",
+                                    Condition: {
+                                        StringEquals: {
+                                            "token.actions.githubusercontent.com:aud":
+                                                "sts.amazonaws.com",
+                                            "token.actions.githubusercontent.com:sub":
+                                                "repo:org/repo:ref:refs/heads/main",
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                        permission_policies: [
+                            {
+                                policy_name: `${prefix}-permissions`,
+                                policy_document: {
+                                    Version: "2012-10-17",
+                                    Statement: [
+                                        {
+                                            Sid: "S3Read",
+                                            Effect: "Allow",
+                                            Action: ["s3:GetBucketLocation"],
+                                            Resource: `arn:aws:s3:::${prefix}-*`,
+                                        },
+                                    ],
+                                },
+                                estimated_size_bytes: 256,
+                            },
+                        ],
+                    },
+                ],
+                template_variables: {
+                    custom_var: "a]value",
+                },
+            });
+            const dangerousValue = 'value"with\\quotes\nand\nnewlines';
+            const configJson = buildConfigJson({
+                template_variables: { custom_var: dangerousValue },
+            });
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inputJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const mockConsole = buildMockConsole();
+
+            // Act
+            const result = await command.execute(
+                { inputPath: "input.json", configPath: "config.json" },
+                mockConsole,
+            );
+
+            // Assert — description should contain the dangerous value, properly embedded
+            expect(result.roles[0]?.create_role.Description).toBe(
+                `role for ${dangerousValue}`,
+            );
+        });
+    });
+
+    describe("given synthesized output fails schema validation", () => {
+        it("should throw a validation error", async () => {
+            // Arrange
+            const inputJson = buildFormulationOutputJson();
+            const configJson = buildConfigJson();
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inputJson)
+                .mockResolvedValueOnce(configJson);
+
+            const brokenSynthesizer = {
+                synthesize: vi.fn().mockReturnValue({
+                    roles: [
+                        {
+                            create_role: {
+                                RoleName: "",
+                                AssumeRolePolicyDocument: "",
+                                Path: "missing-leading-slash",
+                                Description: "",
+                                MaxSessionDuration: 100,
+                            },
+                            create_policies: [],
+                            attach_role_policies: [],
+                        },
+                    ],
+                }),
+            };
+
+            const command = createSynthesizeCommand({
+                parser: createFormulationOutputParser(),
+                configParser: createFormulationConfigParser(),
+                orchestrator: createValidateAndFixOrchestrator({
+                    permissionValidator: {
+                        validate: vi.fn().mockReturnValue([]),
+                    },
+                    trustValidator: { validate: vi.fn().mockReturnValue([]) },
+                    fixer: {
+                        fixPermissionPolicy: vi
+                            .fn()
+                            .mockImplementation((doc) => doc),
+                        fixTrustPolicy: vi
+                            .fn()
+                            .mockImplementation((doc) => doc),
+                    },
+                    unscopedActions: new Set(),
+                }),
+                resolver: createTemplateVariableResolver(),
+                synthesizer: brokenSynthesizer,
+            });
+            const mockConsole = buildMockConsole();
+
+            // Act & Assert
+            await expect(
+                command.execute(
+                    { inputPath: "input.json", configPath: "config.json" },
+                    mockConsole,
+                ),
+            ).rejects.toThrow();
+        });
+    });
+
     describe("given validation fails with errors", () => {
         it("should throw and output errors to stderr", async () => {
             // Arrange
