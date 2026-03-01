@@ -37,7 +37,7 @@ function sanitize(rawData: unknown): unknown {
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         throw new Error(
-            `Invalid Terraform plan: could not sanitize input (${message})`,
+            `Invalid JSON: terraform plan could not be sanitized (${message})`,
         );
     }
 }
