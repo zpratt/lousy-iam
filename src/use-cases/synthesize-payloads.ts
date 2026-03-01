@@ -39,8 +39,6 @@ export function createPayloadSynthesizer(): PayloadSynthesizer {
                 );
             }
 
-            const accountId = resolvedAccountId;
-
             const roles: RoleSynthesis[] = input.roles.map((role) => {
                 const normalizedPath = normalizePath(role.role_path);
 
@@ -66,7 +64,7 @@ export function createPayloadSynthesizer(): PayloadSynthesizer {
                 const attachRolePolicies: AttachRolePolicyPayload[] =
                     role.permission_policies.map((policy) => ({
                         RoleName: role.role_name,
-                        PolicyArn: `arn:${partition}:iam::${accountId}:policy${normalizedPath}${policy.policy_name}`,
+                        PolicyArn: `arn:${partition}:iam::${resolvedAccountId}:policy${normalizedPath}${policy.policy_name}`,
                     }));
 
                 return {

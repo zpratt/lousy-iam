@@ -41,7 +41,7 @@ The formulate command requires a JSON configuration file. This document describe
 | `github_environment_names` | object | `{}` | Map of logical environment names to GitHub Environment names (e.g., `{"prod": "production"}`). Used when `use_github_environments` is `true`. |
 | `permission_boundary_arn` | string or null | `null` | ARN of an IAM permission boundary to attach to the generated roles. |
 | `role_path` | string | `"/"` | IAM role path for the generated roles. |
-| `max_session_duration` | number | `3600` | Maximum session duration in seconds. Must be between 900 (15 minutes) and 43200 (12 hours). |
+| `max_session_duration` | number | `3600` | Maximum session duration in seconds. Must be between 3600 (1 hour) and 43200 (12 hours). |
 
 ## Validation Rules
 
@@ -52,7 +52,7 @@ The configuration is validated at runtime using the following rules:
 - `resource_prefix` must match the pattern `^[A-Za-z0-9_${}][A-Za-z0-9_\-${}]*$`
 - `account_id` must be exactly 12 digits (e.g., `123456789012`)
 - `region` must be a valid AWS region identifier (e.g., `us-east-1`) or `*` for multi-region
-- `max_session_duration` must be an integer between 900 and 43200
+- `max_session_duration` must be an integer between 3600 and 43200
 
 Invalid configurations produce a descriptive error message.
 
