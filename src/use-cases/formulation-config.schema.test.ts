@@ -349,4 +349,37 @@ describe("FormulationConfigSchema", () => {
             expect(result.success).toBe(false);
         });
     });
+
+    describe("given a config with templateVariables", () => {
+        it("should accept a map of string key-value pairs", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+                templateVariables: {
+                    state_bucket: "my-terraform-state",
+                    lock_table: "my-locks",
+                },
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.templateVariables).toEqual({
+                state_bucket: "my-terraform-state",
+                lock_table: "my-locks",
+            });
+        });
+
+        it("should default to empty object when omitted", () => {
+            const input = {
+                githubOrg: chance.word(),
+                githubRepo: chance.word(),
+                resourcePrefix: chance.word(),
+            };
+
+            const result = FormulationConfigSchema.parse(input);
+
+            expect(result.templateVariables).toEqual({});
+        });
+    });
 });

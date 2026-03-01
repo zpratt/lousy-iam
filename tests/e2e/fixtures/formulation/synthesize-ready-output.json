@@ -176,9 +176,6 @@
         "region": "us-east-1",
         "resource_prefix": "e2etest",
         "org": "test-org",
-        "repo": "test-repo",
-        "state_bucket": "e2etest-terraform-state",
-        "state_key_prefix": "e2etest/",
-        "lock_table": "e2etest-terraform-locks"
+        "repo": "test-repo"
     }
 }

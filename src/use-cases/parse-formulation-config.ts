@@ -25,6 +25,7 @@ function transformSnakeToCamel(data: unknown): unknown {
         permission_boundary_arn: "permissionBoundaryArn",
         role_path: "rolePath",
         max_session_duration: "maxSessionDuration",
+        template_variables: "templateVariables",
     };
 
     const result: Record<string, unknown> = {};

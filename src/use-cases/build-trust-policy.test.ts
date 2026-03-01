@@ -21,6 +21,7 @@ function buildConfig(
         permissionBoundaryArn: null,
         rolePath: "/",
         maxSessionDuration: 3600,
+        templateVariables: {},
         ...overrides,
     };
 }

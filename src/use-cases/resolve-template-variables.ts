@@ -29,12 +29,16 @@ function getConfigValue(
     variableKey: string,
 ): string | null {
     const configKey = CONFIG_KEY_MAP[variableKey];
-    if (!configKey) {
+    if (configKey) {
+        const value = config[configKey];
+        if (typeof value === "string") {
+            return value;
+        }
         return null;
     }
-    const value = config[configKey];
-    if (typeof value === "string") {
-        return value;
+    const templateValue = config.templateVariables[variableKey];
+    if (typeof templateValue === "string") {
+        return templateValue;
     }
     return null;
 }

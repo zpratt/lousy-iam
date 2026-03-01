@@ -75,6 +75,11 @@ function buildFormulationConfig(): string {
         region: MOTO_REGION,
         plan_apply_separation: true,
         include_delete_actions: true,
+        template_variables: {
+            state_bucket: "e2etest-terraform-state",
+            state_key_prefix: "e2etest/",
+            lock_table: "e2etest-terraform-locks",
+        },
     });
 }
 

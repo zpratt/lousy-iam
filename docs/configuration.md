@@ -17,7 +17,12 @@ The formulate command requires a JSON configuration file. This document describe
   "github_environment_names": {},
   "permission_boundary_arn": null,
   "role_path": "/",
-  "max_session_duration": 3600
+  "max_session_duration": 3600,
+  "template_variables": {
+    "state_bucket": "myteam-terraform-state",
+    "state_key_prefix": "myteam/",
+    "lock_table": "myteam-terraform-locks"
+  }
 }
 ```
 
@@ -42,6 +47,7 @@ The formulate command requires a JSON configuration file. This document describe
 | `permission_boundary_arn` | string or null | `null` | ARN of an IAM permission boundary to attach to the generated roles. |
 | `role_path` | string | `"/"` | IAM role path for the generated roles. |
 | `max_session_duration` | number | `3600` | Maximum session duration in seconds. Must be between 3600 (1 hour) and 43200 (12 hours). |
+| `template_variables` | object | `{}` | Map of additional template variable names to values. Used by the `synthesize` command to resolve `${...}` placeholders in formulation output that are not covered by top-level config fields (e.g., `state_bucket`, `state_key_prefix`, `lock_table` for Terraform toolchain resources). |
 
 ## Validation Rules
 

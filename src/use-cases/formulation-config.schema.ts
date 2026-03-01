@@ -56,4 +56,5 @@ export const FormulationConfigSchema = z.object({
     permissionBoundaryArn: z.string().nullable().default(null),
     rolePath: z.string().default("/"),
     maxSessionDuration: z.number().int().min(3600).max(43200).default(3600),
+    templateVariables: z.record(z.string(), z.string()).default({}),
 });

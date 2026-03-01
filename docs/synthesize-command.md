@@ -165,14 +165,15 @@ payloads/
 
 ## Configuration Requirements
 
-The `synthesize` command requires that certain template variables can be resolved from either the formulation configuration or from already-resolved values in the formulation output (`template_variables`):
+The `synthesize` command scans the formulation output for **all** `${...}` template variable placeholders and requires that each one can be resolved from either the formulation configuration or from already-resolved values in the formulation output (`template_variables`):
 
 | Variable | When Required | Accepted Sources |
 |----------|---------------|------------------|
 | `account_id` | When formulation output contains `${account_id}` placeholders | Config `account_id` field or `template_variables.account_id` in formulation output |
 | `region` | When formulation output contains `${region}` placeholders | Config `region` field or `template_variables.region` in formulation output |
+| Other variables (e.g., `state_bucket`, `state_key_prefix`, `lock_table`) | When formulation output contains `${<name>}` placeholders | Config `template_variables.<name>` field or `template_variables.<name>` in formulation output |
 
-If the formulation output contains template variable placeholders and neither the config nor the formulation output `template_variables` provides values for all referenced variables, the command exits with a descriptive error listing the missing variable names.
+Toolchain-specific variables (such as Terraform state-related placeholders) do not have dedicated top-level config fields. Provide them via the `template_variables` map in the configuration file so the resolver can substitute them during synthesis.
 
 ## End-to-End Example
 

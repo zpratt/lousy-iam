@@ -21,6 +21,7 @@ function buildConfig(
         permissionBoundaryArn: null,
         rolePath: "/",
         maxSessionDuration: 3600,
+        templateVariables: {},
         ...overrides,
     };
 }
@@ -348,6 +349,58 @@ describe("TemplateVariableResolver", () => {
             expect(result).toEqual({
                 resolved: true,
                 output: `arn:aws:s3:::${bucketName}/${keyPrefix}* arn:aws:dynamodb:us-east-1:123456789012:table/${lockTable}`,
+            });
+        });
+    });
+
+    describe("given config.templateVariables provides a value for an unknown key", () => {
+        it("should resolve the placeholder from config.templateVariables", () => {
+            // Arrange
+            const bucketName = chance.word();
+            const keyPrefix = chance.word();
+            const lockTable = chance.word();
+            const input =
+                // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+                "arn:aws:s3:::${state_bucket}/${state_key_prefix}* arn:aws:dynamodb:us-east-1:123456789012:table/${lock_table}";
+            const templateVariables: Record<string, string> = {};
+            const config = buildConfig({
+                templateVariables: {
+                    state_bucket: bucketName,
+                    state_key_prefix: keyPrefix,
+                    lock_table: lockTable,
+                },
+            });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: `arn:aws:s3:::${bucketName}/${keyPrefix}* arn:aws:dynamodb:us-east-1:123456789012:table/${lockTable}`,
+            });
+        });
+
+        it("should prefer named config fields over config.templateVariables", () => {
+            // Arrange
+            const configAccountId = "111111111111";
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+            const input = "arn:aws:iam::${account_id}:role/test";
+            const templateVariables: Record<string, string> = {};
+            const config = buildConfig({
+                accountId: configAccountId,
+                templateVariables: {
+                    account_id: "222222222222",
+                },
+            });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: `arn:aws:iam::${configAccountId}:role/test`,
             });
         });
     });
