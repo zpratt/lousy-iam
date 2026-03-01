@@ -30,6 +30,11 @@ export interface SynthesisOutput {
 }
 
 export function normalizePath(path: string): string {
+    if (path.includes("..")) {
+        throw new Error(
+            "Path must not contain '..' segments (path traversal not allowed)",
+        );
+    }
     let normalized = path;
     if (!normalized.startsWith("/")) {
         normalized = `/${normalized}`;

@@ -41,4 +41,18 @@ describe("normalizePath", () => {
             expect(result).toBe("/deployment/");
         });
     });
+
+    describe("given a path with traversal segments", () => {
+        it("should throw an error for double-dot segments", () => {
+            expect(() => normalizePath("../../etc")).toThrow(
+                "path traversal not allowed",
+            );
+        });
+
+        it("should throw an error for embedded traversal", () => {
+            expect(() => normalizePath("/deployment/../etc")).toThrow(
+                "path traversal not allowed",
+            );
+        });
+    });
 });

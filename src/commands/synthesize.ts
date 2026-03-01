@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { defineCommand } from "citty";
 import { consola } from "consola";
 import type { FormulationConfig } from "../entities/formulation-config.js";
@@ -85,7 +85,7 @@ async function writeOutput(
     if (options.outputDir) {
         await mkdir(options.outputDir, { recursive: true });
         for (const role of synthesisResult.roles) {
-            const fileName = `${role.create_role.RoleName}.json`;
+            const fileName = `${basename(role.create_role.RoleName)}.json`;
             const filePath = join(options.outputDir, fileName);
             await writeFile(
                 filePath,

@@ -1,4 +1,5 @@
 import type { FormulationConfig } from "../entities/formulation-config.js";
+import { resolvePartition } from "../entities/resolve-partition.js";
 import type {
     AttachRolePolicyPayload,
     CreatePolicyPayload,
@@ -7,7 +8,6 @@ import type {
     SynthesisOutput,
 } from "../entities/synthesis-output.js";
 import { normalizePath } from "../entities/synthesis-output.js";
-import { resolvePartition } from "../lib/resolve-partition.js";
 import type { FormulationOutputInput } from "./formulation-output.schema.js";
 
 export interface PayloadSynthesizer {

@@ -1,6 +1,6 @@
 import type { FormulationConfig } from "../entities/formulation-config.js";
 import type { TrustPolicyDocument } from "../entities/policy-document.js";
-import { resolvePartition } from "../lib/resolve-partition.js";
+import { resolvePartition } from "../entities/resolve-partition.js";
 
 export interface TrustPolicyBuilder {
     buildPlanTrust(config: FormulationConfig): TrustPolicyDocument;

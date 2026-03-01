@@ -166,6 +166,38 @@ function createIamClient(endpoint: string): IAMClient {
     });
 }
 
+async function provisionRole(
+    client: IAMClient,
+    role: SynthesisOutput["roles"][number],
+): Promise<void> {
+    await client.send(new CreateRoleCommand(role.create_role));
+    for (const policy of role.create_policies) {
+        await client.send(new CreatePolicyCommand(policy));
+    }
+    for (const attach of role.attach_role_policies) {
+        await client.send(new AttachRolePolicyCommand(attach));
+    }
+}
+
+async function verifyRole(
+    client: IAMClient,
+    role: SynthesisOutput["roles"][number],
+): Promise<{ roleName: string; attachedPolicyNames: string[] }> {
+    const getResult = await client.send(
+        new GetRoleCommand({ RoleName: role.create_role.RoleName }),
+    );
+    const listResult = await client.send(
+        new ListAttachedRolePoliciesCommand({
+            RoleName: role.create_role.RoleName,
+        }),
+    );
+    return {
+        roleName: getResult.Role?.RoleName ?? "",
+        attachedPolicyNames:
+            listResult.AttachedPolicies?.map((p) => p.PolicyName ?? "") ?? [],
+    };
+}
+
 describe("synthesize command e2e", () => {
     let motoContainer: StartedGenericContainer;
     let network: StartedNetwork;
@@ -322,66 +354,23 @@ describe("synthesize command e2e", () => {
     });
 
     describe("given synthesized payloads applied to moto via AWS SDK v3", () => {
-        it("should create IAM roles via CreateRoleCommand", async () => {
+        it("should create roles, policies, and attachments then verify via GetRole and ListAttachedRolePolicies", async () => {
             const iamClient = createIamClient(motoEndpoint);
 
+            // Provision all roles in moto
             for (const role of synthesisOutput.roles) {
-                const result = await iamClient.send(
-                    new CreateRoleCommand(role.create_role),
-                );
-                expect(result.Role?.RoleName).toBe(role.create_role.RoleName);
+                await provisionRole(iamClient, role);
             }
-        });
 
-        it("should create IAM policies via CreatePolicyCommand", async () => {
-            const iamClient = createIamClient(motoEndpoint);
-
+            // Verify all roles and their policy attachments
             for (const role of synthesisOutput.roles) {
-                for (const policy of role.create_policies) {
-                    const result = await iamClient.send(
-                        new CreatePolicyCommand(policy),
-                    );
-                    expect(result.Policy?.PolicyName).toBe(policy.PolicyName);
-                }
-            }
-        });
-
-        it("should attach policies to roles via AttachRolePolicyCommand", async () => {
-            const iamClient = createIamClient(motoEndpoint);
-
-            for (const role of synthesisOutput.roles) {
-                for (const attach of role.attach_role_policies) {
-                    await iamClient.send(new AttachRolePolicyCommand(attach));
-                }
-            }
-        });
-
-        it("should list attached policies on each role", async () => {
-            const iamClient = createIamClient(motoEndpoint);
-
-            for (const role of synthesisOutput.roles) {
-                const listResult = await iamClient.send(
-                    new ListAttachedRolePoliciesCommand({
-                        RoleName: role.create_role.RoleName,
-                    }),
-                );
-                const attachedNames =
-                    listResult.AttachedPolicies?.map((p) => p.PolicyName) ?? [];
-
+                const result = await verifyRole(iamClient, role);
+                expect(result.roleName).toBe(role.create_role.RoleName);
                 for (const expectedPolicy of role.create_policies) {
-                    expect(attachedNames).toContain(expectedPolicy.PolicyName);
+                    expect(result.attachedPolicyNames).toContain(
+                        expectedPolicy.PolicyName,
+                    );
                 }
-            }
-        });
-
-        it("should retrieve created roles via GetRole", async () => {
-            const iamClient = createIamClient(motoEndpoint);
-
-            for (const role of synthesisOutput.roles) {
-                const result = await iamClient.send(
-                    new GetRoleCommand({ RoleName: role.create_role.RoleName }),
-                );
-                expect(result.Role?.RoleName).toBe(role.create_role.RoleName);
             }
         });
 
