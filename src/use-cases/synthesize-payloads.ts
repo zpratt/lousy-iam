@@ -43,9 +43,7 @@ export function createPayloadSynthesizer(): PayloadSynthesizer {
                 const createPolicies: CreatePolicyPayload[] =
                     role.permission_policies.map((policy) => ({
                         PolicyName: policy.policy_name,
-                        PolicyDocument: JSON.stringify(
-                            policy.policy_document,
-                        ),
+                        PolicyDocument: JSON.stringify(policy.policy_document),
                         Path: normalizedPath,
                         Description: `Permission policy for role ${role.role_name}`,
                     }));

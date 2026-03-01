@@ -154,9 +154,7 @@ describe("SynthesizePayloads", () => {
 
             // Assert
             const createPolicy = result.roles[0]?.create_policies[0];
-            const parsed = JSON.parse(
-                createPolicy?.PolicyDocument ?? "{}",
-            );
+            const parsed = JSON.parse(createPolicy?.PolicyDocument ?? "{}");
             expect(parsed).toHaveProperty("Version", "2012-10-17");
         });
 
@@ -244,9 +242,9 @@ describe("SynthesizePayloads", () => {
             const result = synthesizer.synthesize(input, config);
 
             // Assert
-            expect(
-                result.roles[0]?.create_role,
-            ).not.toHaveProperty("PermissionsBoundary");
+            expect(result.roles[0]?.create_role).not.toHaveProperty(
+                "PermissionsBoundary",
+            );
         });
     });
 
@@ -260,9 +258,9 @@ describe("SynthesizePayloads", () => {
             const result = synthesizer.synthesize(input, config);
 
             // Assert
-            expect(
-                result.roles[0]?.attach_role_policies[0]?.PolicyArn,
-            ).toMatch(/^arn:aws-us-gov:iam::/);
+            expect(result.roles[0]?.attach_role_policies[0]?.PolicyArn).toMatch(
+                /^arn:aws-us-gov:iam::/,
+            );
         });
     });
 
@@ -276,9 +274,9 @@ describe("SynthesizePayloads", () => {
             const result = synthesizer.synthesize(input, config);
 
             // Assert
-            expect(
-                result.roles[0]?.attach_role_policies[0]?.PolicyArn,
-            ).toMatch(/^arn:aws-cn:iam::/);
+            expect(result.roles[0]?.attach_role_policies[0]?.PolicyArn).toMatch(
+                /^arn:aws-cn:iam::/,
+            );
         });
     });
 });

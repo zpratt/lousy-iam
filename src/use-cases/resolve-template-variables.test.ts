@@ -44,6 +44,7 @@ describe("TemplateVariableResolver", () => {
     });
 
     describe("given config provides account_id", () => {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: testing IAM placeholder
         it("should replace ${account_id} placeholders with config value", () => {
             // Arrange
             const accountId = "123456789012";
@@ -155,6 +156,7 @@ describe("TemplateVariableResolver", () => {
     });
 
     describe("given config provides region", () => {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: testing IAM placeholder
         it("should replace ${region} placeholder", () => {
             // Arrange
             const region = "us-east-1";
@@ -198,8 +200,9 @@ describe("TemplateVariableResolver", () => {
         it("should replace all occurrences", () => {
             // Arrange
             const accountId = "123456789012";
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
-            const input = "arn:aws:iam::${account_id}:role/test arn:aws:iam::${account_id}:policy/test";
+            const input =
+                // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+                "arn:aws:iam::${account_id}:role/test arn:aws:iam::${account_id}:policy/test";
             const templateVariables = {
                 account_id: "Target AWS account ID",
             };

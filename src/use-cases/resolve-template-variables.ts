@@ -58,6 +58,42 @@ export interface TemplateVariableResolver {
     ): TemplateResolutionOutcome;
 }
 
+function buildResolutionMap(
+    templateVariables: Readonly<Record<string, string>>,
+    config: FormulationConfig,
+): { map: Map<string, string>; missing: string[] } {
+    const map = new Map<string, string>();
+    const missing: string[] = [];
+
+    for (const [key, templateValue] of Object.entries(templateVariables)) {
+        const configValue = getConfigValue(config, key);
+
+        if (configValue) {
+            map.set(key, configValue);
+        } else if (isResolvedValue(key, templateValue)) {
+            map.set(key, templateValue);
+        } else {
+            missing.push(key);
+        }
+    }
+
+    return { map, missing };
+}
+
+function applyReplacements(
+    input: string,
+    resolutionMap: Map<string, string>,
+): string {
+    let output = input;
+    for (const [key, value] of resolutionMap) {
+        const placeholder = `\${${key}}`;
+        while (output.includes(placeholder)) {
+            output = output.replace(placeholder, value);
+        }
+    }
+    return output;
+}
+
 export function createTemplateVariableResolver(): TemplateVariableResolver {
     return {
         resolve(
@@ -65,36 +101,16 @@ export function createTemplateVariableResolver(): TemplateVariableResolver {
             templateVariables: Readonly<Record<string, string>>,
             config: FormulationConfig,
         ): TemplateResolutionOutcome {
-            const resolutionMap = new Map<string, string>();
-            const missingVariables: string[] = [];
-
-            for (const [key, templateValue] of Object.entries(
+            const { map, missing } = buildResolutionMap(
                 templateVariables,
-            )) {
-                const configValue = getConfigValue(config, key);
+                config,
+            );
 
-                if (configValue) {
-                    resolutionMap.set(key, configValue);
-                } else if (isResolvedValue(key, templateValue)) {
-                    resolutionMap.set(key, templateValue);
-                } else {
-                    missingVariables.push(key);
-                }
+            if (missing.length > 0) {
+                return { resolved: false, missingVariables: missing };
             }
 
-            if (missingVariables.length > 0) {
-                return { resolved: false, missingVariables };
-            }
-
-            let output = input;
-            for (const [key, value] of resolutionMap) {
-                const placeholder = `\${${key}}`;
-                while (output.includes(placeholder)) {
-                    output = output.replace(placeholder, value);
-                }
-            }
-
-            return { resolved: true, output };
+            return { resolved: true, output: applyReplacements(input, map) };
         },
     };
 }
