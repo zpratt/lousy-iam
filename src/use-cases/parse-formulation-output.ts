@@ -14,9 +14,11 @@ export function createFormulationOutputParser(): FormulationOutputParser {
             let raw: unknown;
             try {
                 raw = JSON.parse(content);
-            } catch {
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
                 throw new Error(
-                    "Invalid JSON: formulation output is not valid JSON",
+                    `Invalid JSON: formulation output is not valid JSON (${message})`,
                 );
             }
 

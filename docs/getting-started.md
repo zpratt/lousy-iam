@@ -122,7 +122,7 @@ Or write per-role files to a directory:
 lousy-iam synthesize --input roles.json --config formulation-config.json --output-dir ./payloads/
 ```
 
-> **Note:** The `synthesize` command requires `account_id` in the config when the formulation output contains `${account_id}` placeholders. See [Configuration Reference](./configuration.md) for details.
+> **Note:** When the formulation output contains `${account_id}` placeholders, the `synthesize` command requires either an `account_id` in the config or an already-resolved 12-digit `template_variables.account_id`. See [Configuration Reference](./configuration.md) for details.
 
 See [Synthesize Command](./synthesize-command.md) for full details.
 

@@ -23,8 +23,11 @@ function isAwsProvider(providerName: string): boolean {
 function parseJson(jsonString: string): unknown {
     try {
         return JSON.parse(jsonString);
-    } catch {
-        throw new Error("Invalid JSON input");
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(
+            `Invalid JSON: terraform plan is not valid JSON (${message})`,
+        );
     }
 }
 

@@ -80,7 +80,7 @@ describe("ParseTerraformPlan", () => {
 
             // Act & Assert
             expect(() => parser.parse(invalidInput)).toThrow(
-                "Invalid JSON input",
+                "Invalid JSON: terraform plan is not valid JSON",
             );
         });
 
