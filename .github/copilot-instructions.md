@@ -17,10 +17,12 @@ nvm use
 # Core commands
 npm install              # Install deps (updates package-lock.json)
 npm test                 # Run tests (vitest)
+npm run test:e2e         # Run end-to-end tests (vitest e2e config)
 npm run build            # Production build
 npm run dev              # Start development with hot reload
 npx biome check          # Lint check
 npx biome check --write  # Auto-fix lint/format
+npm run lint:fix         # Auto-fix lint/format (alias for biome check --write)
 
 # File-scoped (faster feedback)
 npx biome check path/to/file.ts
@@ -260,7 +262,7 @@ If the Reviewer agent is unavailable or errors after invocation, proceed with ma
 ### Escape Hatches
 - **Maximum Review Cycles:** 3 rounds. After 3 cycles without resolution, escalate to human reviewer.
 - **Disputed Findings:** If you cannot address a finding or believe it's incorrect, reply with "DISPUTED: [reason]" and escalate.
-- **Platform Limitations:** If `@Reviewer` invocation fails or is unsupported in the current context, document findings manually using the severity table format from `.github/agents/reviewer.agent.md`.
+- **Platform Limitations:** If `@Reviewer` invocation fails or is unsupported in the current context, document findings manually using the severity table format from `.github/agents/reviewer.md`.
 
 ## Context Awareness
 - Read `.github/instructions/software-architecture.instructions.md` before modifying code in `src/`.

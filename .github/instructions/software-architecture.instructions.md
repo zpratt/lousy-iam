@@ -164,3 +164,14 @@ runMain(main);
 - Adapters implement ports, contain no business logic
 - Only composition root instantiates concrete implementations
 - Use cases testable with simple mocks (no file system, no HTTP)
+
+## Validation
+
+Run these commands after every architectural change to confirm compliance:
+
+```bash
+npm test  # If tests fail after restructuring, fix the broken dependencies before proceeding
+```
+
+> If `npm test` fails after a refactor, fix the broken imports or dependency violations before merging.
+
