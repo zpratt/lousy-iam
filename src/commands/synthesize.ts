@@ -153,6 +153,18 @@ async function writeOutput(
     output: SynthesizeConsoleOutput,
 ): Promise<void> {
     if (options.outputDir) {
+        const roleNames = synthesisResult.roles.map(
+            (r) => r.create_role.RoleName,
+        );
+        const seen = new Set<string>();
+        for (const name of roleNames) {
+            if (seen.has(name)) {
+                throw new Error(
+                    `Duplicate role name detected: "${name}". Role names must be unique.`,
+                );
+            }
+            seen.add(name);
+        }
         await mkdir(options.outputDir, { recursive: true });
         for (const role of synthesisResult.roles) {
             const fileName = `${basename(role.create_role.RoleName)}.json`;

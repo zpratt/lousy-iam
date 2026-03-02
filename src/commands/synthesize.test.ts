@@ -287,6 +287,98 @@ describe("SynthesizeCommand", () => {
         });
     });
 
+    describe("given --output-dir flag and duplicate role names", () => {
+        it("should throw an error about duplicate role names", async () => {
+            // Arrange
+            const roleName = chance.word();
+            const duplicateRolesJson = JSON.stringify({
+                roles: [
+                    {
+                        role_name: roleName,
+                        role_path: "/",
+                        description: chance.sentence(),
+                        max_session_duration: 3600,
+                        permission_boundary_arn: null,
+                        trust_policy: {
+                            Version: "2012-10-17",
+                            Statement: [
+                                {
+                                    Sid: "AllowGitHubOIDC",
+                                    Effect: "Allow",
+                                    Principal: {
+                                        Federated:
+                                            "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
+                                    },
+                                    Action: "sts:AssumeRoleWithWebIdentity",
+                                    Condition: {
+                                        StringEquals: {
+                                            "token.actions.githubusercontent.com:aud":
+                                                "sts.amazonaws.com",
+                                            "token.actions.githubusercontent.com:sub":
+                                                "repo:org/repo:ref:refs/heads/main",
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                        permission_policies: [],
+                    },
+                    {
+                        role_name: roleName,
+                        role_path: "/",
+                        description: chance.sentence(),
+                        max_session_duration: 3600,
+                        permission_boundary_arn: null,
+                        trust_policy: {
+                            Version: "2012-10-17",
+                            Statement: [
+                                {
+                                    Sid: "AllowGitHubOIDC",
+                                    Effect: "Allow",
+                                    Principal: {
+                                        Federated:
+                                            "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
+                                    },
+                                    Action: "sts:AssumeRoleWithWebIdentity",
+                                    Condition: {
+                                        StringEquals: {
+                                            "token.actions.githubusercontent.com:aud":
+                                                "sts.amazonaws.com",
+                                            "token.actions.githubusercontent.com:sub":
+                                                "repo:org/repo:ref:refs/heads/main",
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                        permission_policies: [],
+                    },
+                ],
+                template_variables: {},
+            });
+            const configJson = buildConfigJson();
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(duplicateRolesJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const mockConsole = buildMockConsole();
+
+            // Act & Assert
+            await expect(
+                command.execute(
+                    {
+                        inputPath: "input.json",
+                        configPath: "config.json",
+                        outputDir: "output-dir",
+                    },
+                    mockConsole,
+                ),
+            ).rejects.toThrow(`Duplicate role name detected: "${roleName}"`);
+        });
+    });
+
     describe("given both --output and --output-dir flags", () => {
         it("should throw a mutually exclusive error", async () => {
             // Arrange
