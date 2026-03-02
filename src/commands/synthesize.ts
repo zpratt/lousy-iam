@@ -147,22 +147,29 @@ function resolveTemplateVariables(
     return deps.parser.parse(serialized);
 }
 
+function assertUniqueFileNames(synthesisResult: SynthesisOutput): void {
+    const seen = new Map<string, string>();
+    for (const role of synthesisResult.roles) {
+        const roleName = role.create_role.RoleName;
+        const fileName = `${basename(roleName)}.json`;
+        const existing = seen.get(fileName);
+        if (existing !== undefined) {
+            throw new Error(
+                `Role names "${existing}" and "${roleName}" produce the same output filename "${fileName}". ` +
+                    "Role names must produce unique filenames when using --output-dir.",
+            );
+        }
+        seen.set(fileName, roleName);
+    }
+}
+
 async function writeOutput(
     synthesisResult: SynthesisOutput,
     options: SynthesizeCommandOptions,
     output: SynthesizeConsoleOutput,
 ): Promise<void> {
     if (options.outputDir) {
-        const seen = new Set<string>();
-        for (const role of synthesisResult.roles) {
-            const name = role.create_role.RoleName;
-            if (seen.has(name)) {
-                throw new Error(
-                    `Duplicate role name detected: "${name}". Role names must be unique.`,
-                );
-            }
-            seen.add(name);
-        }
+        assertUniqueFileNames(synthesisResult);
         await mkdir(options.outputDir, { recursive: true });
         for (const role of synthesisResult.roles) {
             const fileName = `${basename(role.create_role.RoleName)}.json`;

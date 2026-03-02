@@ -287,49 +287,28 @@ describe("SynthesizeCommand", () => {
         });
     });
 
-    describe("given --output-dir flag and duplicate role names", () => {
-        it("should throw an error about duplicate role names", async () => {
+    describe("given --output-dir with role names that produce colliding filenames", () => {
+        it("should throw an error about duplicate filenames", async () => {
             // Arrange
-            const roleName = chance.word();
-            const buildRole = (name: string) => ({
-                role_name: name,
-                role_path: "/",
-                description: chance.sentence(),
-                max_session_duration: 3600,
-                permission_boundary_arn: null,
-                trust_policy: {
-                    Version: "2012-10-17",
-                    Statement: [
-                        {
-                            Sid: "AllowGitHubOIDC",
-                            Effect: "Allow",
-                            Principal: {
-                                Federated:
-                                    "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
-                            },
-                            Action: "sts:AssumeRoleWithWebIdentity",
-                            Condition: {
-                                StringEquals: {
-                                    "token.actions.githubusercontent.com:aud":
-                                        "sts.amazonaws.com",
-                                    "token.actions.githubusercontent.com:sub":
-                                        "repo:org/repo:ref:refs/heads/main",
-                                },
-                            },
-                        },
-                    ],
-                },
-                permission_policies: [],
-            });
-            const duplicateRolesJson = JSON.stringify({
-                roles: [buildRole(roleName), buildRole(roleName)],
-                template_variables: {},
+            const roleSuffix = chance.word();
+            const roleTemplate = buildFormulationOutputJson();
+            const parsed = JSON.parse(roleTemplate);
+            const baseRole = parsed.roles[0];
+            const inputJson = JSON.stringify({
+                ...parsed,
+                roles: [
+                    { ...baseRole, role_name: `path/a/${roleSuffix}` },
+                    { ...baseRole, role_name: `path/b/${roleSuffix}` },
+                ],
             });
             const configJson = buildConfigJson();
 
             vi.mocked(readFile)
-                .mockResolvedValueOnce(duplicateRolesJson)
+                .mockResolvedValueOnce(inputJson)
                 .mockResolvedValueOnce(configJson);
+            vi.mocked(mkdir).mockResolvedValue(undefined);
+            vi.mocked(writeFile).mockReset();
+            vi.mocked(writeFile).mockResolvedValue();
 
             const command = buildCommand();
             const mockConsole = buildMockConsole();
@@ -344,7 +323,7 @@ describe("SynthesizeCommand", () => {
                     },
                     mockConsole,
                 ),
-            ).rejects.toThrow(`Duplicate role name detected: "${roleName}"`);
+            ).rejects.toThrow("same output filename");
         });
     });
 

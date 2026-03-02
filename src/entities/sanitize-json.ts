@@ -1,4 +1,4 @@
-export const DANGEROUS_KEYS = new Set([
+export const DANGEROUS_KEYS: ReadonlySet<string> = new Set([
     "__proto__",
     "constructor",
     "prototype",
