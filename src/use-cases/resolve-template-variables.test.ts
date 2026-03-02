@@ -444,6 +444,29 @@ describe("TemplateVariableResolver", () => {
         });
     });
 
+    describe("given config.templateVariables provides an empty string value", () => {
+        it("should resolve the placeholder with the empty string", () => {
+            // Arrange
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: IAM ARN placeholder for testing
+            const input = "arn:aws:s3:::bucket/${state_key_prefix}*";
+            const templateVariables: Record<string, string> = {};
+            const config = buildConfig({
+                templateVariables: {
+                    state_key_prefix: "",
+                },
+            });
+
+            // Act
+            const result = resolver.resolve(input, templateVariables, config);
+
+            // Assert
+            expect(result).toEqual({
+                resolved: true,
+                output: "arn:aws:s3:::bucket/*",
+            });
+        });
+    });
+
     describe("given a replacement value that contains the placeholder string", () => {
         it("should not cause an infinite loop", () => {
             // Arrange

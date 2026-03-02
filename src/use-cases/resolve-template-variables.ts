@@ -91,7 +91,7 @@ function buildResolutionMap(
     for (const key of discoverPlaceholderKeys(input)) {
         const configValue = getConfigValue(config, key);
 
-        if (configValue) {
+        if (configValue !== null) {
             map.set(key, configValue);
         } else if (Object.hasOwn(templateVariables, key)) {
             const templateValue = String(templateVariables[key]);
