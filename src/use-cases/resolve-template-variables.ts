@@ -130,6 +130,10 @@ export function createTemplateVariableResolver(): TemplateVariableResolver {
             templateVariables: Readonly<Record<string, string>>,
             config: FormulationConfig,
         ): TemplateResolutionOutcome {
+            if (!input.includes("${")) {
+                return { resolved: true, output: input };
+            }
+
             const { map, missing } = buildResolutionMap(
                 input,
                 templateVariables,

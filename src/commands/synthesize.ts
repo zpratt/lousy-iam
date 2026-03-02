@@ -3,6 +3,7 @@ import { basename, join } from "node:path";
 import { defineCommand } from "citty";
 import { consola } from "consola";
 import type { FormulationConfig } from "../entities/formulation-config.js";
+import { DANGEROUS_KEYS } from "../entities/sanitize-json.js";
 import type { SynthesisOutput } from "../entities/synthesis-output.js";
 import type { ValidationOutput } from "../entities/validation-result.js";
 import type { FormulationOutputInput } from "../use-cases/formulation-output.schema.js";
@@ -55,8 +56,6 @@ function hasValidationWarnings(validation: ValidationOutput): boolean {
         r.policy_results.some((p) => p.stats.warnings > 0),
     );
 }
-
-const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 function assertSafeObjectKey(key: string): void {
     if (DANGEROUS_KEYS.has(key)) {

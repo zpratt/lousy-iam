@@ -1,4 +1,8 @@
-const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+export const DANGEROUS_KEYS = new Set([
+    "__proto__",
+    "constructor",
+    "prototype",
+]);
 const MAX_DEPTH = 64;
 
 function sanitize(value: unknown, depth: number): unknown {
