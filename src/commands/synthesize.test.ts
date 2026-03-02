@@ -291,69 +291,38 @@ describe("SynthesizeCommand", () => {
         it("should throw an error about duplicate role names", async () => {
             // Arrange
             const roleName = chance.word();
+            const buildRole = (name: string) => ({
+                role_name: name,
+                role_path: "/",
+                description: chance.sentence(),
+                max_session_duration: 3600,
+                permission_boundary_arn: null,
+                trust_policy: {
+                    Version: "2012-10-17",
+                    Statement: [
+                        {
+                            Sid: "AllowGitHubOIDC",
+                            Effect: "Allow",
+                            Principal: {
+                                Federated:
+                                    "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
+                            },
+                            Action: "sts:AssumeRoleWithWebIdentity",
+                            Condition: {
+                                StringEquals: {
+                                    "token.actions.githubusercontent.com:aud":
+                                        "sts.amazonaws.com",
+                                    "token.actions.githubusercontent.com:sub":
+                                        "repo:org/repo:ref:refs/heads/main",
+                                },
+                            },
+                        },
+                    ],
+                },
+                permission_policies: [],
+            });
             const duplicateRolesJson = JSON.stringify({
-                roles: [
-                    {
-                        role_name: roleName,
-                        role_path: "/",
-                        description: chance.sentence(),
-                        max_session_duration: 3600,
-                        permission_boundary_arn: null,
-                        trust_policy: {
-                            Version: "2012-10-17",
-                            Statement: [
-                                {
-                                    Sid: "AllowGitHubOIDC",
-                                    Effect: "Allow",
-                                    Principal: {
-                                        Federated:
-                                            "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
-                                    },
-                                    Action: "sts:AssumeRoleWithWebIdentity",
-                                    Condition: {
-                                        StringEquals: {
-                                            "token.actions.githubusercontent.com:aud":
-                                                "sts.amazonaws.com",
-                                            "token.actions.githubusercontent.com:sub":
-                                                "repo:org/repo:ref:refs/heads/main",
-                                        },
-                                    },
-                                },
-                            ],
-                        },
-                        permission_policies: [],
-                    },
-                    {
-                        role_name: roleName,
-                        role_path: "/",
-                        description: chance.sentence(),
-                        max_session_duration: 3600,
-                        permission_boundary_arn: null,
-                        trust_policy: {
-                            Version: "2012-10-17",
-                            Statement: [
-                                {
-                                    Sid: "AllowGitHubOIDC",
-                                    Effect: "Allow",
-                                    Principal: {
-                                        Federated:
-                                            "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
-                                    },
-                                    Action: "sts:AssumeRoleWithWebIdentity",
-                                    Condition: {
-                                        StringEquals: {
-                                            "token.actions.githubusercontent.com:aud":
-                                                "sts.amazonaws.com",
-                                            "token.actions.githubusercontent.com:sub":
-                                                "repo:org/repo:ref:refs/heads/main",
-                                        },
-                                    },
-                                },
-                            ],
-                        },
-                        permission_policies: [],
-                    },
-                ],
+                roles: [buildRole(roleName), buildRole(roleName)],
                 template_variables: {},
             });
             const configJson = buildConfigJson();

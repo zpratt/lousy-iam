@@ -153,11 +153,9 @@ async function writeOutput(
     output: SynthesizeConsoleOutput,
 ): Promise<void> {
     if (options.outputDir) {
-        const roleNames = synthesisResult.roles.map(
-            (r) => r.create_role.RoleName,
-        );
         const seen = new Set<string>();
-        for (const name of roleNames) {
+        for (const role of synthesisResult.roles) {
+            const name = role.create_role.RoleName;
             if (seen.has(name)) {
                 throw new Error(
                     `Duplicate role name detected: "${name}". Role names must be unique.`,
