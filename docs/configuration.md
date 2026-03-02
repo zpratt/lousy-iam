@@ -17,7 +17,12 @@ The formulate command requires a JSON configuration file. This document describe
   "github_environment_names": {},
   "permission_boundary_arn": null,
   "role_path": "/",
-  "max_session_duration": 3600
+  "max_session_duration": 3600,
+  "template_variables": {
+    "state_bucket": "myteam-terraform-state",
+    "state_key_prefix": "myteam/",
+    "lock_table": "myteam-terraform-locks"
+  }
 }
 ```
 
@@ -33,7 +38,7 @@ The formulate command requires a JSON configuration file. This document describe
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `account_id` | string or null | `null` | AWS account ID (12 digits). When provided, replaces `${account_id}` placeholder in trust policy OIDC ARNs with the actual value. |
+| `account_id` | string or null | `null` | AWS account ID (12 digits). When provided, replaces `${account_id}` placeholder in trust policy OIDC ARNs with the actual value. **Required for the `synthesize` command**: synthesis must have a resolved 12-digit account ID from either this field or `template_variables.account_id`, even if the formulation output contains no `${account_id}` placeholders, because it is also used to construct IAM policy ARNs (e.g., for `AttachRolePolicy` payloads). |
 | `region` | string or null | `null` | AWS region identifier (e.g., `us-east-1`) or `*` for multi-region. When provided, records the actual region in `template_variables` output. Also determines the AWS partition for OIDC ARNs. |
 | `plan_apply_separation` | boolean | `true` | Generate separate plan and apply roles. When `false`, only the apply role is generated. |
 | `include_delete_actions` | boolean | `true` | Include delete-category IAM actions in the apply role. Set to `false` to prevent accidental resource destruction. |
@@ -41,7 +46,8 @@ The formulate command requires a JSON configuration file. This document describe
 | `github_environment_names` | object | `{}` | Map of logical environment names to GitHub Environment names (e.g., `{"prod": "production"}`). Used when `use_github_environments` is `true`. |
 | `permission_boundary_arn` | string or null | `null` | ARN of an IAM permission boundary to attach to the generated roles. |
 | `role_path` | string | `"/"` | IAM role path for the generated roles. |
-| `max_session_duration` | number | `3600` | Maximum session duration in seconds. Must be between 900 (15 minutes) and 43200 (12 hours). |
+| `max_session_duration` | number | `3600` | Maximum session duration in seconds. Must be between 3600 (1 hour) and 43200 (12 hours). |
+| `template_variables` | object | `{}` | Map of additional template variable names to values. Used by the `synthesize` command to resolve `${...}` placeholders in formulation output that are not covered by top-level config fields (e.g., `state_bucket`, `state_key_prefix`, `lock_table` for Terraform toolchain resources). |
 
 ## Validation Rules
 
@@ -52,7 +58,7 @@ The configuration is validated at runtime using the following rules:
 - `resource_prefix` must match the pattern `^[A-Za-z0-9_${}][A-Za-z0-9_\-${}]*$`
 - `account_id` must be exactly 12 digits (e.g., `123456789012`)
 - `region` must be a valid AWS region identifier (e.g., `us-east-1`) or `*` for multi-region
-- `max_session_duration` must be an integer between 900 and 43200
+- `max_session_duration` must be an integer between 3600 and 43200
 
 Invalid configurations produce a descriptive error message.
 
@@ -123,3 +129,4 @@ The configuration file must be valid JSON. Field names use `snake_case` to match
 - [Getting Started](./getting-started.md) — End-to-end workflow
 - [Formulate Command](./formulate-command.md) — How the config is used to generate policies
 - [Validate Command](./validate-command.md) — Phase 3 policy validation
+- [Synthesize Command](./synthesize-command.md) — Phase 4 SDK payload synthesis

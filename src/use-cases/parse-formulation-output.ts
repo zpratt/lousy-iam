@@ -1,26 +1,8 @@
+import { stripDangerousKeys } from "../entities/sanitize-json.js";
 import {
     type FormulationOutputInput,
     FormulationOutputSchema,
 } from "./formulation-output.schema.js";
-
-const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-
-function stripDangerousKeys(value: unknown): unknown {
-    if (value === null || typeof value !== "object") {
-        return value;
-    }
-    if (Array.isArray(value)) {
-        return value.map(stripDangerousKeys);
-    }
-    const result: Record<string, unknown> = {};
-    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-        if (DANGEROUS_KEYS.has(key)) {
-            continue;
-        }
-        result[key] = stripDangerousKeys(val);
-    }
-    return result;
-}
 
 export interface FormulationOutputParser {
     parse(content: string): FormulationOutputInput;
@@ -29,8 +11,28 @@ export interface FormulationOutputParser {
 export function createFormulationOutputParser(): FormulationOutputParser {
     return {
         parse(content: string): FormulationOutputInput {
-            const raw: unknown = JSON.parse(content);
-            const data = stripDangerousKeys(raw);
+            let raw: unknown;
+            try {
+                raw = JSON.parse(content);
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                throw new Error(
+                    `Invalid JSON: formulation output is not valid JSON (${message})`,
+                );
+            }
+
+            let data: unknown;
+            try {
+                data = stripDangerousKeys(raw);
+            } catch (error) {
+                const message =
+                    error instanceof Error ? error.message : String(error);
+                throw new Error(
+                    `Invalid JSON: formulation output could not be sanitized (${message})`,
+                );
+            }
+
             return FormulationOutputSchema.parse(data);
         },
     };

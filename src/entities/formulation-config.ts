@@ -11,4 +11,5 @@ export interface FormulationConfig {
     readonly permissionBoundaryArn: string | null;
     readonly rolePath: string;
     readonly maxSessionDuration: number;
+    readonly templateVariables: Readonly<Record<string, string>>;
 }

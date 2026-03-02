@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import type { ActionInventoryMetadata } from "../entities/action-inventory.js";
+import { stripDangerousKeys } from "../entities/sanitize-json.js";
 import type {
     ResourceChange,
     TerraformPlan,
@@ -19,31 +20,48 @@ function isAwsProvider(providerName: string): boolean {
     return providerName.includes("hashicorp/aws");
 }
 
+function parseJson(jsonString: string): unknown {
+    try {
+        return JSON.parse(jsonString);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(
+            `Invalid JSON: terraform plan is not valid JSON (${message})`,
+        );
+    }
+}
+
+function sanitize(rawData: unknown): unknown {
+    try {
+        return stripDangerousKeys(rawData);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(
+            `Invalid JSON: terraform plan could not be sanitized (${message})`,
+        );
+    }
+}
+
+function validatePlan(data: unknown): TerraformPlan {
+    try {
+        return TerraformPlanSchema.parse(data);
+    } catch (error) {
+        if (error instanceof ZodError) {
+            const details = error.issues
+                .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+                .join("; ");
+            throw new Error(`Invalid Terraform plan: ${details}`);
+        }
+        throw error;
+    }
+}
+
 export function createTerraformPlanParser(): TerraformPlanParser {
     return {
         parse(jsonString: string): ParseResult {
-            let rawData: unknown;
-            try {
-                rawData = JSON.parse(jsonString);
-            } catch {
-                throw new Error("Invalid JSON input");
-            }
-
-            let plan: TerraformPlan;
-            try {
-                plan = TerraformPlanSchema.parse(rawData);
-            } catch (error) {
-                if (error instanceof ZodError) {
-                    const details = error.issues
-                        .map(
-                            (issue) =>
-                                `${issue.path.join(".")}: ${issue.message}`,
-                        )
-                        .join("; ");
-                    throw new Error(`Invalid Terraform plan: ${details}`);
-                }
-                throw error;
-            }
+            const rawData = parseJson(jsonString);
+            const sanitized = sanitize(rawData);
+            const plan = validatePlan(sanitized);
 
             const awsResourceChanges = plan.resource_changes.filter((rc) =>
                 isAwsProvider(rc.provider_name),

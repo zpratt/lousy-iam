@@ -1,6 +1,7 @@
 import { defineCommand, runMain } from "citty";
 import { createAnalyzeCittyCommand } from "./commands/analyze.js";
 import { createFormulateCittyCommand } from "./commands/formulate.js";
+import { createSynthesizeCittyCommand } from "./commands/synthesize.js";
 import { createValidateCittyCommand } from "./commands/validate.js";
 import { createActionMappingDb } from "./gateways/action-mapping-db.js";
 import { UNSCOPED_ACTIONS } from "./lib/unscoped-actions.js";
@@ -14,7 +15,9 @@ import { createActionInventoryParser } from "./use-cases/parse-action-inventory.
 import { createFormulationConfigParser } from "./use-cases/parse-formulation-config.js";
 import { createFormulationOutputParser } from "./use-cases/parse-formulation-output.js";
 import { createTerraformPlanParser } from "./use-cases/parse-terraform-plan.js";
+import { createTemplateVariableResolver } from "./use-cases/resolve-template-variables.js";
 import { createActionInventorySerializer } from "./use-cases/serialize-action-inventory.js";
+import { createPayloadSynthesizer } from "./use-cases/synthesize-payloads.js";
 import { createValidateAndFixOrchestrator } from "./use-cases/validate-and-fix.js";
 import { createPermissionPolicyValidator } from "./use-cases/validate-permission-policy.js";
 import { createTrustPolicyValidator } from "./use-cases/validate-trust-policy.js";
@@ -46,6 +49,19 @@ const validate = createValidateCittyCommand({
     }),
 });
 
+const synthesize = createSynthesizeCittyCommand({
+    parser: createFormulationOutputParser(),
+    configParser: createFormulationConfigParser(),
+    orchestrator: createValidateAndFixOrchestrator({
+        permissionValidator: createPermissionPolicyValidator(),
+        trustValidator: createTrustPolicyValidator(),
+        fixer: createPolicyFixer(),
+        unscopedActions: UNSCOPED_ACTIONS,
+    }),
+    resolver: createTemplateVariableResolver(),
+    synthesizer: createPayloadSynthesizer(),
+});
+
 const main = defineCommand({
     meta: {
         name: "lousy-iam",
@@ -56,6 +72,7 @@ const main = defineCommand({
         analyze,
         formulate,
         validate,
+        synthesize,
     },
 });
 

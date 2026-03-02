@@ -22,8 +22,14 @@ export interface ValidateAndFixDeps {
     readonly unscopedActions: ReadonlySet<string>;
 }
 
+export interface ValidateAndFixResult {
+    readonly validation: ValidationOutput;
+    readonly fixedOutput: FormulationOutputInput;
+}
+
 export interface ValidateAndFixOrchestrator {
     execute(input: FormulationOutputInput): ValidationOutput;
+    executeWithFixed(input: FormulationOutputInput): ValidateAndFixResult;
 }
 
 function computeStats(
@@ -77,7 +83,11 @@ function runPermissionFixLoop(
     deps: ValidateAndFixDeps,
     permPolicy: PermissionPolicyInput,
     roleName: string,
-): { result: PolicyValidationResult; iterations: number } {
+): {
+    result: PolicyValidationResult;
+    iterations: number;
+    fixedDocument: PermissionPolicyInput["policy_document"];
+} {
     let currentDoc = deepCopy(permPolicy.policy_document);
     let violations: readonly ValidationViolation[] = [];
     let previousFingerprint = "";
@@ -123,6 +133,7 @@ function runPermissionFixLoop(
             ),
         },
         iterations,
+        fixedDocument: currentDoc,
     };
 }
 
@@ -132,7 +143,11 @@ function runTrustFixLoop(
     deps: ValidateAndFixDeps,
     trustPolicy: TrustPolicyInput,
     roleType: RoleType,
-): { result: PolicyValidationResult; iterations: number } {
+): {
+    result: PolicyValidationResult;
+    iterations: number;
+    fixedDocument: TrustPolicyInput;
+} {
     let trustDoc = deepCopy(trustPolicy);
     let trustViolations: readonly ValidationViolation[] = [];
     let previousTrustFingerprint = "";
@@ -174,57 +189,88 @@ function runTrustFixLoop(
             ),
         },
         iterations: trustIterations,
+        fixedDocument: trustDoc,
     };
 }
 
 export function createValidateAndFixOrchestrator(
     deps: ValidateAndFixDeps,
 ): ValidateAndFixOrchestrator {
-    return {
-        execute(input: FormulationOutputInput): ValidationOutput {
-            const roleResults: RoleValidationResult[] = [];
-            let totalIterations = 0;
+    function runOrchestration(
+        input: FormulationOutputInput,
+    ): ValidateAndFixResult {
+        const roleResults: RoleValidationResult[] = [];
+        let totalIterations = 0;
 
-            for (const role of input.roles) {
-                const roleType = detectRoleType(role.role_name);
-                const policyResults: PolicyValidationResult[] = [];
+        type FixedRole = FormulationOutputInput["roles"][number];
+        const fixedRoles: FixedRole[] = [];
 
-                for (const permPolicy of role.permission_policies) {
-                    const { result, iterations } = runPermissionFixLoop(
-                        deps,
-                        permPolicy,
-                        role.role_name,
-                    );
-                    policyResults.push(result);
-                    totalIterations = Math.max(totalIterations, iterations);
-                }
+        for (const role of input.roles) {
+            const roleType = detectRoleType(role.role_name);
+            const policyResults: PolicyValidationResult[] = [];
 
-                const { result: trustResult, iterations: trustIter } =
-                    runTrustFixLoop(deps, role.trust_policy, roleType);
+            const fixedPermPolicies: FixedRole["permission_policies"] = [];
 
-                policyResults.push({
-                    ...trustResult,
-                    policy_name: `${role.role_name}-trust`,
-                });
-
-                totalIterations = Math.max(totalIterations, trustIter);
-
-                const roleValid = policyResults.every((p) => p.valid);
-
-                roleResults.push({
-                    role_name: role.role_name,
-                    valid: roleValid,
-                    policy_results: policyResults,
+            for (const permPolicy of role.permission_policies) {
+                const { result, iterations, fixedDocument } =
+                    runPermissionFixLoop(deps, permPolicy, role.role_name);
+                policyResults.push(result);
+                totalIterations = Math.max(totalIterations, iterations);
+                fixedPermPolicies.push({
+                    ...permPolicy,
+                    policy_document: fixedDocument,
                 });
             }
 
-            const allValid = roleResults.every((r) => r.valid);
+            const {
+                result: trustResult,
+                iterations: trustIter,
+                fixedDocument: fixedTrustDoc,
+            } = runTrustFixLoop(deps, role.trust_policy, roleType);
 
-            return {
+            policyResults.push({
+                ...trustResult,
+                policy_name: `${role.role_name}-trust`,
+            });
+
+            totalIterations = Math.max(totalIterations, trustIter);
+
+            const roleValid = policyResults.every((p) => p.valid);
+
+            roleResults.push({
+                role_name: role.role_name,
+                valid: roleValid,
+                policy_results: policyResults,
+            });
+
+            fixedRoles.push({
+                ...role,
+                trust_policy: fixedTrustDoc,
+                permission_policies: fixedPermPolicies,
+            });
+        }
+
+        const allValid = roleResults.every((r) => r.valid);
+
+        return {
+            validation: {
                 valid: allValid,
                 role_results: roleResults,
                 fix_iterations: totalIterations,
-            };
+            },
+            fixedOutput: {
+                ...input,
+                roles: fixedRoles,
+            },
+        };
+    }
+
+    return {
+        execute(input: FormulationOutputInput): ValidationOutput {
+            return runOrchestration(input).validation;
+        },
+        executeWithFixed(input: FormulationOutputInput): ValidateAndFixResult {
+            return runOrchestration(input);
         },
     };
 }
