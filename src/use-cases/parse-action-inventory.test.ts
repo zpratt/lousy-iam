@@ -54,4 +54,23 @@ describe("ParseActionInventory", () => {
             expect(() => parser.parse(input)).toThrow();
         });
     });
+
+    describe("given JSON with prototype pollution keys", () => {
+        it("should strip __proto__ keys and parse safely", () => {
+            // Arrange
+            const input =
+                '{"metadata":{"iac_tool":"terraform","iac_version":"1.7.0","format_version":"1.0"},"toolchain_actions":{"plan_and_apply":[{"action":"sts:GetCallerIdentity","resource":"*","purpose":"Provider initialization","category":"toolchain"}],"apply_only":[]},"infrastructure_actions":{"plan_and_apply":[],"apply_only":[]},"__proto__":{"isAdmin":true}}';
+
+            // Act
+            const result = parser.parse(input);
+
+            // Assert
+            expect(result.metadata.iac_tool).toBe("terraform");
+            expect(
+                Object.keys(result as Record<string, unknown>).includes(
+                    "__proto__",
+                ),
+            ).toBe(false);
+        });
+    });
 });

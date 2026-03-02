@@ -103,6 +103,29 @@ describe("ParseFormulationConfig", () => {
         });
     });
 
+    describe("given valid JSON with template_variables in snake_case", () => {
+        it("should parse and transform template_variables to camelCase key", () => {
+            const org = chance.word();
+            const repo = chance.word();
+            const prefix = chance.word();
+            const bucketName = chance.word();
+            const input = JSON.stringify({
+                github_org: org,
+                github_repo: repo,
+                resource_prefix: prefix,
+                template_variables: {
+                    state_bucket: bucketName,
+                },
+            });
+
+            const result = parser.parse(input);
+
+            expect(result.templateVariables).toEqual({
+                state_bucket: bucketName,
+            });
+        });
+    });
+
     describe("given JSON with prototype pollution keys", () => {
         it("should ignore __proto__ key and parse safely", () => {
             const org = chance.word();
