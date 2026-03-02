@@ -138,4 +138,36 @@ describe("SynthesisOutputSchema", () => {
             expect(result.success).toBe(false);
         });
     });
+
+    describe("given RoleName with forward slash path separator", () => {
+        it("should reject", () => {
+            // Arrange
+            const input = buildValidOutput();
+            const role = input.roles[0];
+            if (!role) throw new Error("Expected role");
+            role.create_role.RoleName = "path/separator-role";
+
+            // Act
+            const result = SynthesisOutputSchema.safeParse(input);
+
+            // Assert
+            expect(result.success).toBe(false);
+        });
+    });
+
+    describe("given RoleName with backslash path separator", () => {
+        it("should reject", () => {
+            // Arrange
+            const input = buildValidOutput();
+            const role = input.roles[0];
+            if (!role) throw new Error("Expected role");
+            role.create_role.RoleName = "path\\separator-role";
+
+            // Act
+            const result = SynthesisOutputSchema.safeParse(input);
+
+            // Assert
+            expect(result.success).toBe(false);
+        });
+    });
 });

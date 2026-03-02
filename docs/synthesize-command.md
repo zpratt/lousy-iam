@@ -155,7 +155,7 @@ lousy-iam synthesize --input roles.json --config config.json --output sdk-payloa
 lousy-iam synthesize --input roles.json --config config.json --output-dir ./payloads/
 ```
 
-This creates files named `{basename(role_name)}.json` in the specified directory, where `basename` extracts the final path segment of the role name. Role names must not contain path separators (`/` or `\`); if they do, the command will error on filename collisions:
+This creates files named `{role_name}.json` in the specified directory. Role names must not contain path separators (`/` or `\`) — this is enforced by schema validation at parse time (and is consistent with AWS IAM role name constraints). If two roles have the same name, the command errors before writing any files:
 
 ```
 payloads/

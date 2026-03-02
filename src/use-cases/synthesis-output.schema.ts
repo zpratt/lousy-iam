@@ -1,7 +1,13 @@
 import { z } from "zod";
 
 const CreateRolePayloadSchema = z.object({
-    RoleName: z.string().min(1),
+    RoleName: z
+        .string()
+        .min(1)
+        .regex(
+            /^[^/\\]+$/,
+            "Role name must not contain path separators (/ or \\)",
+        ),
     AssumeRolePolicyDocument: z.string().min(1),
     Path: z.string().startsWith("/").endsWith("/"),
     Description: z.string(),

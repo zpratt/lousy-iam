@@ -287,18 +287,47 @@ describe("SynthesizeCommand", () => {
         });
     });
 
-    describe("given --output-dir with role names that produce colliding filenames", () => {
-        it("should throw an error about duplicate filenames", async () => {
+    describe("given role name with path separator in formulation output", () => {
+        it("should throw a parse error rejecting the path separator", async () => {
             // Arrange
-            const roleSuffix = chance.word();
+            const roleTemplate = buildFormulationOutputJson();
+            const parsed = JSON.parse(roleTemplate);
+            const baseRole = parsed.roles[0];
+            const inputJson = JSON.stringify({
+                ...parsed,
+                roles: [{ ...baseRole, role_name: "path/separator-role" }],
+            });
+
+            vi.mocked(readFile).mockResolvedValueOnce(inputJson);
+
+            const command = buildCommand();
+            const mockConsole = buildMockConsole();
+
+            // Act & Assert
+            await expect(
+                command.execute(
+                    {
+                        inputPath: "input.json",
+                        configPath: "config.json",
+                    },
+                    mockConsole,
+                ),
+            ).rejects.toThrow();
+        });
+    });
+
+    describe("given --output-dir with duplicate role names", () => {
+        it("should throw an error about duplicate role names", async () => {
+            // Arrange
+            const roleName = `${chance.word()}-github-apply`;
             const roleTemplate = buildFormulationOutputJson();
             const parsed = JSON.parse(roleTemplate);
             const baseRole = parsed.roles[0];
             const inputJson = JSON.stringify({
                 ...parsed,
                 roles: [
-                    { ...baseRole, role_name: `path/a/${roleSuffix}` },
-                    { ...baseRole, role_name: `path/b/${roleSuffix}` },
+                    { ...baseRole, role_name: roleName },
+                    { ...baseRole, role_name: roleName },
                 ],
             });
             const configJson = buildConfigJson();
@@ -323,7 +352,7 @@ describe("SynthesizeCommand", () => {
                     },
                     mockConsole,
                 ),
-            ).rejects.toThrow("same output filename");
+            ).rejects.toThrow("Duplicate role name");
         });
     });
 

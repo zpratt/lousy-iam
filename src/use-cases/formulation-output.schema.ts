@@ -54,7 +54,12 @@ const PermissionPolicySchema = z.object({
 });
 
 const RoleDefinitionSchema = z.object({
-    role_name: z.string(),
+    role_name: z
+        .string()
+        .regex(
+            /^[^/\\]+$/,
+            "Role name must not contain path separators (/ or \\)",
+        ),
     role_path: z.string(),
     description: z.string(),
     max_session_duration: z.number(),

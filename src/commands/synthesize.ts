@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { defineCommand } from "citty";
 import { consola } from "consola";
 import type { FormulationConfig } from "../entities/formulation-config.js";
@@ -147,19 +147,16 @@ function resolveTemplateVariables(
     return deps.parser.parse(serialized);
 }
 
-function assertUniqueFileNames(synthesisResult: SynthesisOutput): void {
-    const seen = new Map<string, string>();
+function assertUniqueRoleNames(synthesisResult: SynthesisOutput): void {
+    const seen = new Set<string>();
     for (const role of synthesisResult.roles) {
         const roleName = role.create_role.RoleName;
-        const fileName = `${basename(roleName)}.json`;
-        const existing = seen.get(fileName);
-        if (existing !== undefined) {
+        if (seen.has(roleName)) {
             throw new Error(
-                `Role names "${existing}" and "${roleName}" produce the same output filename "${fileName}". ` +
-                    "Role names must produce unique filenames when using --output-dir.",
+                `Duplicate role name detected: "${roleName}". Role names must be unique.`,
             );
         }
-        seen.set(fileName, roleName);
+        seen.add(roleName);
     }
 }
 
@@ -169,10 +166,10 @@ async function writeOutput(
     output: SynthesizeConsoleOutput,
 ): Promise<void> {
     if (options.outputDir) {
-        assertUniqueFileNames(synthesisResult);
+        assertUniqueRoleNames(synthesisResult);
         await mkdir(options.outputDir, { recursive: true });
         for (const role of synthesisResult.roles) {
-            const fileName = `${basename(role.create_role.RoleName)}.json`;
+            const fileName = `${role.create_role.RoleName}.json`;
             const filePath = join(options.outputDir, fileName);
             await writeFile(
                 filePath,
