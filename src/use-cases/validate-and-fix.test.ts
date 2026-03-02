@@ -277,6 +277,130 @@ describe("ValidateAndFixOrchestrator", () => {
         });
     });
 
+    describe("executeWithFixed", () => {
+        describe("given an auto-fixable permission policy violation", () => {
+            it("should return validation output and fixer-applied policy documents", () => {
+                // Arrange
+                const input = buildFormulationOutput();
+                const originalDoc =
+                    input.roles[0]?.permission_policies[0]?.policy_document;
+                if (!originalDoc) {
+                    throw new Error("Expected policy document to exist");
+                }
+                const firstStatement = originalDoc.Statement[0];
+                if (!firstStatement) {
+                    throw new Error("Expected first statement to exist");
+                }
+                const fixedDoc = {
+                    ...originalDoc,
+                    Statement: [
+                        {
+                            ...firstStatement,
+                            Action: ["s3:GetObject"],
+                        },
+                    ],
+                };
+                const violation = buildViolation({
+                    rule_id: "LP-045",
+                    auto_fixable: true,
+                    statement_index: 0,
+                });
+                const permissionValidator = {
+                    validate: vi
+                        .fn()
+                        .mockReturnValueOnce([violation])
+                        .mockReturnValue([]),
+                };
+                const trustValidator = {
+                    validate: vi.fn().mockReturnValue([]),
+                };
+                const fixer = {
+                    fixPermissionPolicy: vi.fn().mockReturnValue(fixedDoc),
+                    fixTrustPolicy: vi.fn(),
+                };
+                const orchestrator = createValidateAndFixOrchestrator({
+                    permissionValidator,
+                    trustValidator,
+                    fixer,
+                    unscopedActions: new Set(),
+                });
+
+                // Act
+                const result = orchestrator.executeWithFixed(input);
+
+                // Assert
+                expect(result.validation.valid).toBe(true);
+                expect(
+                    result.fixedOutput.roles[0]?.permission_policies[0]
+                        ?.policy_document,
+                ).toEqual(fixedDoc);
+                expect(result.fixedOutput.roles[0]?.trust_policy).toEqual(
+                    input.roles[0]?.trust_policy,
+                );
+                expect(result.fixedOutput.template_variables).toEqual(
+                    input.template_variables,
+                );
+            });
+        });
+
+        describe("given an auto-fixable trust policy violation", () => {
+            it("should return fixer-applied trust policy in fixedOutput", () => {
+                // Arrange
+                const input = buildFormulationOutput();
+                const originalTrust = input.roles[0]?.trust_policy;
+                if (!originalTrust) {
+                    throw new Error("Expected trust policy to exist");
+                }
+                const firstTrustStatement = originalTrust.Statement[0];
+                if (!firstTrustStatement) {
+                    throw new Error("Expected first trust statement to exist");
+                }
+                const fixedTrust = {
+                    ...originalTrust,
+                    Statement: [
+                        {
+                            ...firstTrustStatement,
+                            Sid: "Fixed",
+                        },
+                    ],
+                };
+                const trustViolation = buildViolation({
+                    rule_id: "LP-030",
+                    auto_fixable: true,
+                    statement_index: 0,
+                });
+                const permissionValidator = {
+                    validate: vi.fn().mockReturnValue([]),
+                };
+                const trustValidator = {
+                    validate: vi
+                        .fn()
+                        .mockReturnValueOnce([trustViolation])
+                        .mockReturnValue([]),
+                };
+                const fixer = {
+                    fixPermissionPolicy: vi.fn(),
+                    fixTrustPolicy: vi.fn().mockReturnValue(fixedTrust),
+                };
+                const orchestrator = createValidateAndFixOrchestrator({
+                    permissionValidator,
+                    trustValidator,
+                    fixer,
+                    unscopedActions: new Set(),
+                });
+
+                // Act
+                const result = orchestrator.executeWithFixed(input);
+
+                // Assert
+                expect(result.validation.valid).toBe(true);
+                expect(result.fixedOutput.roles[0]?.trust_policy).toEqual(
+                    fixedTrust,
+                );
+            });
+        });
+    });
+
     describe("given role name with plan", () => {
         it("should detect plan role type", () => {
             // Arrange

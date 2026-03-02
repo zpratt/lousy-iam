@@ -1,0 +1,181 @@
+{
+    "roles": [
+        {
+            "role_name": "e2etest-github-plan",
+            "role_path": "/",
+            "description": "Read-only role for terraform plan on pull requests",
+            "max_session_duration": 3600,
+            "permission_boundary_arn": null,
+            "trust_policy": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "AllowGitHubOIDC",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Federated": "arn:aws:iam::${account_id}:oidc-provider/token.actions.githubusercontent.com"
+                        },
+                        "Action": "sts:AssumeRoleWithWebIdentity",
+                        "Condition": {
+                            "StringEquals": {
+                                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                                "token.actions.githubusercontent.com:sub": "repo:test-org/test-repo:pull_request"
+                            }
+                        }
+                    }
+                ]
+            },
+            "permission_policies": [
+                {
+                    "policy_name": "e2etest-github-plan-permissions",
+                    "policy_document": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Sid": "StsToolchainRead",
+                                "Effect": "Allow",
+                                "Action": ["sts:GetCallerIdentity"],
+                                "Resource": "*"
+                            },
+                            {
+                                "Sid": "S3ToolchainRead",
+                                "Effect": "Allow",
+                                "Action": ["s3:GetObject"],
+                                "Resource": "arn:aws:s3:::${state_bucket}/${state_key_prefix}*"
+                            },
+                            {
+                                "Sid": "S3ToolchainRead2",
+                                "Effect": "Allow",
+                                "Action": ["s3:ListBucket"],
+                                "Resource": "arn:aws:s3:::${state_bucket}"
+                            },
+                            {
+                                "Sid": "DynamodbToolchainRead",
+                                "Effect": "Allow",
+                                "Action": ["dynamodb:GetItem"],
+                                "Resource": "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}"
+                            },
+                            {
+                                "Sid": "S3InfraRead",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "s3:GetBucketLocation",
+                                    "s3:ListBucket",
+                                    "s3:GetBucketPolicy",
+                                    "s3:GetBucketTagging"
+                                ],
+                                "Resource": "arn:aws:s3:::e2etest-*"
+                            }
+                        ]
+                    },
+                    "estimated_size_bytes": 512
+                }
+            ]
+        },
+        {
+            "role_name": "e2etest-github-apply",
+            "role_path": "/",
+            "description": "Full CRUD role for terraform apply on merge to main",
+            "max_session_duration": 3600,
+            "permission_boundary_arn": null,
+            "trust_policy": {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "AllowGitHubOIDC",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Federated": "arn:aws:iam::${account_id}:oidc-provider/token.actions.githubusercontent.com"
+                        },
+                        "Action": "sts:AssumeRoleWithWebIdentity",
+                        "Condition": {
+                            "StringEquals": {
+                                "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
+                                "token.actions.githubusercontent.com:sub": "repo:test-org/test-repo:ref:refs/heads/main"
+                            }
+                        }
+                    }
+                ]
+            },
+            "permission_policies": [
+                {
+                    "policy_name": "e2etest-github-apply-permissions",
+                    "policy_document": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Sid": "StsToolchainRead",
+                                "Effect": "Allow",
+                                "Action": ["sts:GetCallerIdentity"],
+                                "Resource": "*"
+                            },
+                            {
+                                "Sid": "S3ToolchainRead",
+                                "Effect": "Allow",
+                                "Action": ["s3:GetObject"],
+                                "Resource": "arn:aws:s3:::${state_bucket}/${state_key_prefix}*"
+                            },
+                            {
+                                "Sid": "S3ToolchainRead2",
+                                "Effect": "Allow",
+                                "Action": ["s3:ListBucket"],
+                                "Resource": "arn:aws:s3:::${state_bucket}"
+                            },
+                            {
+                                "Sid": "DynamodbToolchainRead",
+                                "Effect": "Allow",
+                                "Action": ["dynamodb:GetItem"],
+                                "Resource": "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}"
+                            },
+                            {
+                                "Sid": "S3ToolchainWrite",
+                                "Effect": "Allow",
+                                "Action": ["s3:DeleteObject", "s3:PutObject"],
+                                "Resource": "arn:aws:s3:::${state_bucket}/${state_key_prefix}*"
+                            },
+                            {
+                                "Sid": "DynamodbToolchainWrite",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "dynamodb:DeleteItem",
+                                    "dynamodb:PutItem"
+                                ],
+                                "Resource": "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}"
+                            },
+                            {
+                                "Sid": "S3InfraRead",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "s3:GetBucketLocation",
+                                    "s3:ListBucket",
+                                    "s3:GetBucketPolicy",
+                                    "s3:GetBucketTagging"
+                                ],
+                                "Resource": "arn:aws:s3:::e2etest-*"
+                            },
+                            {
+                                "Sid": "S3InfraWrite",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "s3:CreateBucket",
+                                    "s3:PutBucketPolicy",
+                                    "s3:PutBucketTagging",
+                                    "s3:DeleteBucket"
+                                ],
+                                "Resource": "arn:aws:s3:::e2etest-*"
+                            }
+                        ]
+                    },
+                    "estimated_size_bytes": 1024
+                }
+            ]
+        }
+    ],
+    "template_variables": {
+        "account_id": "Target AWS account ID",
+        "region": "us-east-1",
+        "resource_prefix": "e2etest",
+        "org": "test-org",
+        "repo": "test-repo"
+    }
+}

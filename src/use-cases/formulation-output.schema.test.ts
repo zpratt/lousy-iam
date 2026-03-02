@@ -142,5 +142,31 @@ describe("FormulationOutputSchema", () => {
 
             expect(result.success).toBe(true);
         });
+
+        it("should reject role_name with forward slash path separator", () => {
+            const input = buildValidFormulationOutput();
+            const role = input.roles[0];
+            if (role) {
+                (role as Record<string, unknown>).role_name =
+                    "path/separator-role";
+            }
+
+            const result = FormulationOutputSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
+
+        it("should reject role_name with backslash path separator", () => {
+            const input = buildValidFormulationOutput();
+            const role = input.roles[0];
+            if (role) {
+                (role as Record<string, unknown>).role_name =
+                    "path\\separator-role";
+            }
+
+            const result = FormulationOutputSchema.safeParse(input);
+
+            expect(result.success).toBe(false);
+        });
     });
 });
