@@ -66,6 +66,23 @@ function assertSafeObjectKey(key: string): void {
     }
 }
 
+function assertUniqueResolvedKey(
+    keySources: Record<string, string>,
+    resolvedKey: string,
+    originalKey: string,
+): void {
+    if (
+        Object.hasOwn(keySources, resolvedKey) &&
+        keySources[resolvedKey] !== originalKey
+    ) {
+        throw new Error(
+            `Template variable resolution produced duplicate object key "${resolvedKey}" ` +
+                `from source keys "${keySources[resolvedKey]}" and "${originalKey}". ` +
+                "Template variables in object property names must resolve to unique keys.",
+        );
+    }
+}
+
 function resolveTemplateVariables(
     deps: SynthesizeCommandDeps,
     fixedOutput: FormulationOutputInput,
@@ -102,10 +119,13 @@ function resolveTemplateVariables(
 
         if (value !== null && typeof value === "object") {
             const result: Record<string, unknown> = Object.create(null);
+            const keySources: Record<string, string> = Object.create(null);
 
             for (const [key, val] of Object.entries(value)) {
                 const resolvedKey = resolveString(key);
                 assertSafeObjectKey(resolvedKey);
+                assertUniqueResolvedKey(keySources, resolvedKey, key);
+                keySources[resolvedKey] = key;
                 result[resolvedKey] = resolveValue(val);
             }
 

@@ -520,6 +520,85 @@ describe("SynthesizeCommand", () => {
         });
     });
 
+    describe("given template variables that resolve two different keys to the same value", () => {
+        it("should throw an error about duplicate resolved keys", async () => {
+            // Arrange
+            const prefix = chance.word();
+            const inputJson = JSON.stringify({
+                roles: [
+                    {
+                        role_name: `${prefix}-github-apply`,
+                        role_path: "/",
+                        description: chance.sentence(),
+                        max_session_duration: 3600,
+                        permission_boundary_arn: null,
+                        trust_policy: {
+                            Version: "2012-10-17",
+                            Statement: [
+                                {
+                                    Sid: "AllowGitHubOIDC",
+                                    Effect: "Allow",
+                                    Principal: {
+                                        Federated:
+                                            "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com",
+                                    },
+                                    Action: "sts:AssumeRoleWithWebIdentity",
+                                    Condition: {
+                                        StringEquals: {
+                                            "token.actions.githubusercontent.com:aud":
+                                                "sts.amazonaws.com",
+                                            "${key_a}": "value-a",
+                                            "${key_b}": "value-b",
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                        permission_policies: [
+                            {
+                                policy_name: `${prefix}-permissions`,
+                                policy_document: {
+                                    Version: "2012-10-17",
+                                    Statement: [
+                                        {
+                                            Sid: "S3Read",
+                                            Effect: "Allow",
+                                            Action: ["s3:GetBucketLocation"],
+                                            Resource: `arn:aws:s3:::${prefix}-*`,
+                                        },
+                                    ],
+                                },
+                                estimated_size_bytes: 256,
+                            },
+                        ],
+                    },
+                ],
+                template_variables: {
+                    key_a: "descriptive placeholder",
+                    key_b: "descriptive placeholder",
+                },
+            });
+            const configJson = buildConfigJson({
+                template_variables: { key_a: "same_key", key_b: "same_key" },
+            });
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inputJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const mockConsole = buildMockConsole();
+
+            // Act & Assert
+            await expect(
+                command.execute(
+                    { inputPath: "input.json", configPath: "config.json" },
+                    mockConsole,
+                ),
+            ).rejects.toThrow("duplicate object key");
+        });
+    });
+
     describe("given synthesized output fails schema validation", () => {
         it("should throw a validation error", async () => {
             // Arrange
