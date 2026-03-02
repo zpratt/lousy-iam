@@ -121,6 +121,18 @@ Every task must include verification steps the agent can run:
 
 All diagrams in specs must use **Mermaid** syntax for consistency and GitHub rendering support.
 
+## Validation
+
+Every spec task verification must confirm the following pass before considering work complete:
+
+```bash
+npm test        # Run tests — if tests fail, the task is not done
+npm run lint    # Run lint — fix all lint errors before marking complete
+npm run build   # Build check — fix all TypeScript errors before marking complete
+```
+
+> If any validation command fails, the task cannot be marked complete. Fix errors before proceeding.
+
 ## Related Files
 
 - `.github/ISSUE_TEMPLATE/feature-to-spec.yml` — Issue template for creating specs

@@ -13,6 +13,8 @@ npm run lint:workflows  # Validate GitHub Actions workflows with actionlint
 npm run lint:yaml       # Validate YAML syntax with yamllint
 ```
 
+> If either command fails, fix the reported errors before committing.
+
 ## Workflow Structure Requirements
 
 1. Every workflow MUST include test and lint jobs.
@@ -44,7 +46,17 @@ Before adding any action:
 |----------|--------|
 | Default (all workflows) | `ubuntu-latest` |
 
-## Example CI Workflow
+## Commands (Example CI Workflow)
+
+The following commands run as CI jobs. Run them locally to verify your changes:
+
+```bash
+npm run build  # Production build — fix TypeScript errors before merging
+npm test       # Run tests — fix test failures before merging
+npx biome check  # Lint check — fix lint errors before merging
+```
+
+> If any command fails, fix the reported errors before pushing.
 
 ```yaml
 name: CI
