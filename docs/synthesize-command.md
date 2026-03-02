@@ -155,7 +155,7 @@ lousy-iam synthesize --input roles.json --config config.json --output sdk-payloa
 lousy-iam synthesize --input roles.json --config config.json --output-dir ./payloads/
 ```
 
-This creates files named `{role_name}.json` in the specified directory:
+This creates files named `{basename(role_name)}.json` in the specified directory, where `basename` extracts the final path segment of the role name. Role names must not contain path separators (`/` or `\`); if they do, the command will error on filename collisions:
 
 ```
 payloads/
@@ -169,7 +169,7 @@ The `synthesize` command scans the formulation output for **all** `${...}` templ
 
 | Variable | When Required | Accepted Sources |
 |----------|---------------|------------------|
-| `account_id` | When formulation output contains `${account_id}` placeholders | Config `account_id` field or `template_variables.account_id` in formulation output |
+| `account_id` | Always required for `synthesize` (used for `PolicyArn` construction and `${account_id}` placeholder resolution) | Config `account_id` field or `template_variables.account_id` in formulation output |
 | `region` | When formulation output contains `${region}` placeholders | Config `region` field or `template_variables.region` in formulation output |
 | Other variables (e.g., `state_bucket`, `state_key_prefix`, `lock_table`) | When formulation output contains `${<name>}` placeholders | Config `template_variables.<name>` field or `template_variables.<name>` in formulation output |
 

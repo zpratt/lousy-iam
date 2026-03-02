@@ -124,7 +124,7 @@ Or write per-role files to a directory:
 lousy-iam synthesize --input roles.json --config formulation-config.json --output-dir ./payloads/
 ```
 
-> **Note:** When the formulation output contains `${account_id}` placeholders, the `synthesize` command requires either an `account_id` in the config or an already-resolved 12-digit `template_variables.account_id`. See [Configuration Reference](./configuration.md) for details.
+> **Note:** The `synthesize` command requires a resolved AWS account ID to generate `PolicyArn`s for attachments. Provide it either as `account_id` in the config or as an already-resolved 12-digit `template_variables.account_id`. If your formulation output still contains `${account_id}` placeholders, they must be resolvable via these settings. See [Configuration Reference](./configuration.md) for details.
 
 See [Synthesize Command](./synthesize-command.md) for full details.
 
