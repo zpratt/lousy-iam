@@ -249,20 +249,20 @@ When you have finished writing, refactoring, or fixing code:
 > **⚠️ Security & Architecture Check Required**
 > I have completed the initial implementation. To ensure compliance with `.github/instructions/software-architecture.instructions.md` and security standards, please invoke the Hostile Reviewer:
 >
-> **@Reviewer check this code for evil paths and architectural violations.**
+> **@reviewer check this code for evil paths and architectural violations.**
 
 ### Invocation Context
-The `@Reviewer` invocation works in:
+The `@reviewer` invocation works in:
 - **GitHub Copilot Chat** within an IDE
 - **Pull Request comments** on GitHub.com
 - **Issue discussions** where agent invocations are supported
 
-If the Reviewer agent is unavailable or errors after invocation, proceed with manual review by a human maintainer.
+If the reviewer agent is unavailable or errors after invocation, proceed with manual review by a human maintainer.
 
 ### Escape Hatches
 - **Maximum Review Cycles:** 3 rounds. After 3 cycles without resolution, escalate to human reviewer.
 - **Disputed Findings:** If you cannot address a finding or believe it's incorrect, reply with "DISPUTED: [reason]" and escalate.
-- **Platform Limitations:** If `@Reviewer` invocation fails or is unsupported in the current context, document findings manually using the severity table format from `.github/agents/reviewer.md`.
+- **Platform Limitations:** If `@reviewer` invocation fails or is unsupported in the current context, document findings manually using the severity table format from `.github/agents/reviewer.md`.
 
 ## Context Awareness
 - Read `.github/instructions/software-architecture.instructions.md` before modifying code in `src/`.
