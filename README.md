@@ -14,6 +14,7 @@ lousy-iam analyzes your Terraform plan output and produces tightly scoped IAM tr
 - **Concrete values** — Optionally provide `account_id` and `region` in configuration for deployment-ready policies (with automatic AWS partition resolution for GovCloud and China regions)
 - **Policy validation** — 33 security rules across 6 categories validate generated policies against least-privilege best practices
 - **Auto-fix** — 10 deterministic violations are automatically fixed without manual intervention
+- **SDK payload synthesis** — Transforms validated policies into AWS SDK v3 payloads (`CreateRoleCommand`, `CreatePolicyCommand`, `AttachRolePolicyCommand`) with template variable resolution
 - **Extensible action mapping** — Built-in database covering 23 AWS resource types, easy to extend
 
 ## Documentation
