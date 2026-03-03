@@ -24,6 +24,7 @@ lousy-iam analyzes your Terraform plan output and produces tightly scoped IAM tr
 | [Analyze Command](docs/analyze-command.md) | Phase 1: parse a Terraform plan and produce an action inventory |
 | [Formulate Command](docs/formulate-command.md) | Phase 2: transform the action inventory into IAM policy documents |
 | [Validate Command](docs/validate-command.md) | Phase 3: validate policies against least-privilege rules and auto-fix |
+| [Synthesize Command](docs/synthesize-command.md) | Phase 4: transform validated policies into AWS SDK v3 payloads |
 | [Configuration Reference](docs/configuration.md) | All formulation configuration options |
 | [Action Mapping Database](docs/action-mapping-database.md) | How resource-to-IAM-action mapping works and how to extend it |
 
@@ -49,6 +50,9 @@ npx lousy-iam formulate --input action-inventory.json --config formulation-confi
 
 # Validate policies against least-privilege rules
 npx lousy-iam validate --input roles.json > validation-results.json
+
+# Synthesize AWS SDK v3 payloads (requires account_id in config)
+npx lousy-iam synthesize --input roles.json --config formulation-config.json > sdk-payloads.json
 ```
 
 See [Getting Started](docs/getting-started.md) for a detailed walkthrough.

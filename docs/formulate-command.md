@@ -193,4 +193,5 @@ When `include_delete_actions` is `false`, delete-category actions are excluded f
 - [Getting Started](./getting-started.md) — End-to-end workflow
 - [Configuration Reference](./configuration.md) — All configuration options
 - [Validate Command](./validate-command.md) — Phase 3 policy validation
+- [Synthesize Command](./synthesize-command.md) — Phase 4 SDK payload synthesis
 - [Analyze Command](./analyze-command.md) — Phase 1 action inventory generation

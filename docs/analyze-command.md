@@ -151,4 +151,5 @@ The resource is skipped in the output. See [Action Mapping Database](./action-ma
 - [Getting Started](./getting-started.md) — End-to-end workflow
 - [Formulate Command](./formulate-command.md) — Phase 2 policy generation
 - [Validate Command](./validate-command.md) — Phase 3 policy validation
+- [Synthesize Command](./synthesize-command.md) — Phase 4 SDK payload synthesis
 - [Action Mapping Database](./action-mapping-database.md) — How resource-to-IAM-action mapping works

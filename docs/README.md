@@ -12,6 +12,7 @@ lousy-iam generates least-privilege AWS IAM policy documents from Terraform plan
   - [analyze](./analyze-command.md) — Phase 1: parse a Terraform plan into an action inventory
   - [formulate](./formulate-command.md) — Phase 2: turn the action inventory into IAM policy documents
   - [validate](./validate-command.md) — Phase 3: validate policies against least-privilege rules and auto-fix
+  - [synthesize](./synthesize-command.md) — Phase 4: transform validated policies into AWS SDK v3 payloads
 - [Configuration Reference](./configuration.md)
 - [Action Mapping Database](./action-mapping-database.md)
 - [End-to-End Workflow](#end-to-end-workflow)
@@ -29,17 +30,17 @@ lousy-iam automates the derivation of tight, plan-driven IAM policies so your Gi
 
 ## How It Works
 
-lousy-iam works in three phases:
+lousy-iam works in four phases:
 
 ```mermaid
 flowchart TD
     A[Terraform plan JSON] --> B[analyze\nPhase 1: maps every resource change\nto its required IAM actions]
     B -->|action inventory JSON| C[formulate\nPhase 2: builds trust + permission\npolicy documents for two OIDC roles]
     C -->|roles JSON| D[validate\nPhase 3: checks policies against\n33 least-privilege rules and auto-fixes]
-    C -->|roles JSON| E[Provisioning pipeline\nTerraform / CDK / CloudFormation\ncreates the IAM roles in AWS]
-    D -->|validation results JSON| F{Gate: validation passed?}
-    F -->|yes| E
-    F -->|no| G[Stop: fix policy issues\nand re-run validate]
+    D -->|validation results JSON| E{Gate: validation passed?}
+    E -->|yes| F[synthesize\nPhase 4: resolves template variables\nand produces AWS SDK v3 payloads]
+    E -->|no| G[Stop: fix policy issues\nand re-run validate]
+    F -->|SDK payloads JSON| H[Deploy with AWS SDK v3\nor provisioning pipeline]
 ```
 
 1. **[analyze](./analyze-command.md)** reads `terraform show -json` output, looks up each resource type in the [action mapping database](./action-mapping-database.md), and emits a structured action inventory JSON. Actions are split into `plan_and_apply` (read-only, both roles need them) and `apply_only` (write operations, apply role only).
@@ -47,6 +48,8 @@ flowchart TD
 2. **[formulate](./formulate-command.md)** takes the action inventory and a small [configuration file](./configuration.md) and produces complete IAM role definitions — trust policies scoped to GitHub OIDC and permission policies grouped by AWS service — ready for your provisioning pipeline to consume.
 
 3. **[validate](./validate-command.md)** checks the formulation output against 33 security rules across 6 categories, automatically fixes 10 deterministic violations (missing `Version` field, duplicate actions, missing conditions), and produces structured validation results with rule IDs and fix hints for remaining issues.
+
+4. **[synthesize](./synthesize-command.md)** resolves `${...}` template variables using your configuration, runs validation internally, and transforms the formulation output into AWS SDK v3 payloads (`CreateRoleCommand`, `CreatePolicyCommand`, `AttachRolePolicyCommand`) ready to deploy.
 
 ---
 
@@ -65,6 +68,8 @@ flowchart TD
 | **Cross-resource deduplication** | When multiple resources require the same IAM action, entries are merged and all source resources are preserved for full traceability |
 | **Policy validation** | 33 security rules across 6 categories validate generated policies against least-privilege best practices |
 | **Auto-fix** | 10 deterministic violations are automatically fixed (missing Version field, duplicate actions, missing conditions) without manual intervention |
+| **Concrete values** | Optionally provide `account_id` and `region` in configuration for deployment-ready policies with automatic AWS partition resolution (standard, GovCloud, China) |
+| **SDK payload synthesis** | Transforms validated policies into AWS SDK v3 payloads (`CreateRoleCommand`, `CreatePolicyCommand`, `AttachRolePolicyCommand`) with template variable resolution |
 
 ### Supported AWS Resource Types
 
@@ -102,10 +107,13 @@ npx lousy-iam formulate \
 # 5. Validate generated policies against least-privilege rules
 npx lousy-iam validate --input roles.json > validation-results.json
 
-# 6. Hand roles.json to your provisioning pipeline
-#    (Terraform, CDK, CloudFormation, AWS CLI, etc.)
-#    The pipeline resolves template variables like ${account_id} and ${region}
-#    and creates the actual IAM roles in AWS.
+# 6. Synthesize AWS SDK v3 payloads
+npx lousy-iam synthesize \
+  --input roles.json \
+  --config formulation-config.json \
+  > sdk-payloads.json
+
+# 7. Deploy with AWS SDK v3 or your provisioning pipeline
 ```
 
 For a detailed walkthrough with example output, see [Getting Started](./getting-started.md).
@@ -144,9 +152,21 @@ Validates the formulation output against 33 least-privilege security rules acros
 
 → [Full reference](./validate-command.md)
 
+### `synthesize` — Phase 4
+
+```bash
+lousy-iam synthesize --input <formulation-output.json> --config <config.json>
+```
+
+Resolves `${...}` template variables, runs validation internally, and transforms formulation output into AWS SDK v3 payloads (`CreateRoleCommandInput`, `CreatePolicyCommandInput`, `AttachRolePolicyCommandInput`). Supports stdout, single-file (`--output`), or per-role directory (`--output-dir`) output modes.
+
+→ [Full reference](./synthesize-command.md) · [Configuration reference](./configuration.md)
+
 ---
 
 ## Output Overview
+
+### Formulate Output
 
 `formulate` produces a `roles.json` with two top-level keys:
 
@@ -185,3 +205,39 @@ Validates the formulation output against 33 least-privilege security rules acros
 The `template_variables` object lists the primary placeholders that `formulate` exposes so your pipeline knows what to substitute before creating the IAM roles. Additional placeholders may appear directly in the generated policy documents and should also be substituted as appropriate for your environment.
 
 → [Formulate Command](./formulate-command.md) for the full output schema
+
+### Synthesize Output
+
+`synthesize` transforms the formulation output into AWS SDK v3 payloads:
+
+```json
+{
+  "roles": [
+    {
+      "create_role": {
+        "RoleName": "myteam-github-apply",
+        "AssumeRolePolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[...]}",
+        "Path": "/",
+        "Description": "GitHub Actions apply role for myteam",
+        "MaxSessionDuration": 3600
+      },
+      "create_policies": [
+        {
+          "PolicyName": "myteam-github-apply-permissions",
+          "PolicyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[...]}",
+          "Path": "/",
+          "Description": "Permission policy for role myteam-github-apply"
+        }
+      ],
+      "attach_role_policies": [
+        {
+          "RoleName": "myteam-github-apply",
+          "PolicyArn": "arn:aws:iam::123456789012:policy/myteam-github-apply-permissions"
+        }
+      ]
+    }
+  ]
+}
+```
+
+→ [Synthesize Command](./synthesize-command.md) for the full output schema
