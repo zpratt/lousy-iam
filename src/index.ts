@@ -35,13 +35,6 @@ const outputResolver = createOutputVariableResolver(
     createTemplateVariableResolver(),
 );
 
-const formulateOrchestrator = createValidateAndFixOrchestrator({
-    permissionValidator: createPermissionPolicyValidator(),
-    trustValidator: createTrustPolicyValidator(),
-    fixer: createPolicyFixer(),
-    unscopedActions: UNSCOPED_ACTIONS,
-});
-
 const formulate = createFormulateCittyCommand({
     configParser: createFormulationConfigParser(),
     inventoryParser: createActionInventoryParser(),
@@ -50,7 +43,12 @@ const formulate = createFormulateCittyCommand({
         trustPolicyBuilder: createTrustPolicyBuilder(),
     }),
     parser: createFormulationOutputParser(),
-    orchestrator: formulateOrchestrator,
+    orchestrator: createValidateAndFixOrchestrator({
+        permissionValidator: createPermissionPolicyValidator(),
+        trustValidator: createTrustPolicyValidator(),
+        fixer: createPolicyFixer(),
+        unscopedActions: UNSCOPED_ACTIONS,
+    }),
     outputResolver,
 });
 

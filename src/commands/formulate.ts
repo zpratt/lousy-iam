@@ -48,6 +48,7 @@ export function createFormulateCommand(
 
             const result = deps.formulator.formulate(inventory, config);
 
+            // Convert entity type to schema-validated input for the orchestrator
             const parsedResult = deps.parser.parse(JSON.stringify(result));
             const { fixedOutput } =
                 deps.orchestrator.executeWithFixed(parsedResult);
