@@ -170,8 +170,10 @@ runMain(main);
 Run these commands after every architectural change to confirm compliance:
 
 ```bash
-npm test  # If tests fail after restructuring, fix the broken dependencies before proceeding
+npx biome check  # Lint — catch import violations and style issues
+npm test          # Test — verify no broken dependencies or regressions
+npm run build     # Build — catch TypeScript compile errors from restructuring
 ```
 
-> If `npm test` fails after a refactor, fix the broken imports or dependency violations before merging.
+> If any command fails after a refactor, fix the broken imports or dependency violations before merging.
 
