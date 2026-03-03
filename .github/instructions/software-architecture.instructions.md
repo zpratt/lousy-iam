@@ -164,3 +164,16 @@ runMain(main);
 - Adapters implement ports, contain no business logic
 - Only composition root instantiates concrete implementations
 - Use cases testable with simple mocks (no file system, no HTTP)
+
+## Validation
+
+Run these commands after every architectural change to confirm compliance:
+
+```bash
+npx biome check  # Lint — catch import violations and style issues
+npm test          # Test — verify no broken dependencies or regressions
+npm run build     # Build — catch TypeScript compile errors from restructuring
+```
+
+> If any command fails after a refactor, fix the broken imports or dependency violations before merging.
+
