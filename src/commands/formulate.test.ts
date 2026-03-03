@@ -468,4 +468,34 @@ describe("FormulateCommand", () => {
             }
         });
     });
+
+    describe("given inventory with unfixable wildcard resource violations", () => {
+        it("should warn about unfixable errors and still return fixed output", async () => {
+            // Arrange - ecs:DescribeClusters with resource "*" triggers unfixable LP-010
+            const inventoryJson = buildInventoryJson();
+            const configJson = buildConfigJson();
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inventoryJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const warnFn = vi.fn();
+            const mockConsole = { log: vi.fn(), warn: warnFn };
+
+            // Act
+            const result = await command.execute(
+                "inventory.json",
+                "config.json",
+                mockConsole,
+            );
+
+            // Assert
+            expect(warnFn).toHaveBeenCalledWith(
+                expect.stringMatching(/unfixable error/),
+            );
+            expect(result.roles).toBeDefined();
+            expect(result.roles.length).toBeGreaterThan(0);
+        });
+    });
 });

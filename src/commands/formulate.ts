@@ -50,8 +50,32 @@ export function createFormulateCommand(
 
             // Convert entity type to schema-validated input for the orchestrator
             const parsedResult = deps.parser.parse(JSON.stringify(result));
-            const { fixedOutput } =
+            const { validation, fixedOutput } =
                 deps.orchestrator.executeWithFixed(parsedResult);
+
+            if (!validation.valid) {
+                const totalErrors = validation.role_results.reduce(
+                    (sum, r) =>
+                        sum +
+                        r.policy_results.reduce(
+                            (pSum, p) => pSum + p.stats.errors,
+                            0,
+                        ),
+                    0,
+                );
+                const totalWarnings = validation.role_results.reduce(
+                    (sum, r) =>
+                        sum +
+                        r.policy_results.reduce(
+                            (pSum, p) => pSum + p.stats.warnings,
+                            0,
+                        ),
+                    0,
+                );
+                output.warn(
+                    `Validation found ${totalErrors} unfixable error(s) and ${totalWarnings} warning(s)`,
+                );
+            }
 
             const resolution = deps.outputResolver.resolve(
                 fixedOutput,
