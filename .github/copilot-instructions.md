@@ -17,10 +17,12 @@ nvm use
 # Core commands
 npm install              # Install deps (updates package-lock.json)
 npm test                 # Run tests (vitest)
+npm run test:e2e         # Run end-to-end tests (vitest e2e config)
 npm run build            # Production build
 npm run dev              # Start development with hot reload
 npx biome check          # Lint check
 npx biome check --write  # Auto-fix lint/format
+npm run lint:fix         # Auto-fix lint/format (alias for biome check --write)
 
 # File-scoped (faster feedback)
 npx biome check path/to/file.ts
@@ -247,20 +249,20 @@ When you have finished writing, refactoring, or fixing code:
 > **⚠️ Security & Architecture Check Required**
 > I have completed the initial implementation. To ensure compliance with `.github/instructions/software-architecture.instructions.md` and security standards, please invoke the Hostile Reviewer:
 >
-> **@Reviewer check this code for evil paths and architectural violations.**
+> **@reviewer check this code for evil paths and architectural violations.**
 
 ### Invocation Context
-The `@Reviewer` invocation works in:
+The `@reviewer` invocation works in:
 - **GitHub Copilot Chat** within an IDE
 - **Pull Request comments** on GitHub.com
 - **Issue discussions** where agent invocations are supported
 
-If the Reviewer agent is unavailable or errors after invocation, proceed with manual review by a human maintainer.
+If the reviewer agent is unavailable or errors after invocation, proceed with manual review by a human maintainer.
 
 ### Escape Hatches
 - **Maximum Review Cycles:** 3 rounds. After 3 cycles without resolution, escalate to human reviewer.
 - **Disputed Findings:** If you cannot address a finding or believe it's incorrect, reply with "DISPUTED: [reason]" and escalate.
-- **Platform Limitations:** If `@Reviewer` invocation fails or is unsupported in the current context, document findings manually using the severity table format from `.github/agents/reviewer.agent.md`.
+- **Platform Limitations:** If `@reviewer` invocation fails or is unsupported in the current context, document findings manually using the severity table format from `.github/agents/reviewer.md`.
 
 ## Context Awareness
 - Read `.github/instructions/software-architecture.instructions.md` before modifying code in `src/`.
