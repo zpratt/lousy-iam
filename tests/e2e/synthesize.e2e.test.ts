@@ -25,6 +25,7 @@ import { UNSCOPED_ACTIONS } from "../../src/lib/unscoped-actions.js";
 import { createPolicyFixer } from "../../src/use-cases/fix-policy.js";
 import { createFormulationConfigParser } from "../../src/use-cases/parse-formulation-config.js";
 import { createFormulationOutputParser } from "../../src/use-cases/parse-formulation-output.js";
+import { createOutputVariableResolver } from "../../src/use-cases/resolve-output-variables.js";
 import { createTemplateVariableResolver } from "../../src/use-cases/resolve-template-variables.js";
 import { createPayloadSynthesizer } from "../../src/use-cases/synthesize-payloads.js";
 import { createValidateAndFixOrchestrator } from "../../src/use-cases/validate-and-fix.js";
@@ -61,7 +62,9 @@ function buildSynthesizeCommand() {
             fixer: createPolicyFixer(),
             unscopedActions: UNSCOPED_ACTIONS,
         }),
-        resolver: createTemplateVariableResolver(),
+        outputResolver: createOutputVariableResolver(
+            createTemplateVariableResolver(),
+        ),
         synthesizer: createPayloadSynthesizer(),
     });
 }
@@ -214,6 +217,38 @@ describe("synthesize command e2e", () => {
                 synthesisOutput.roles[0]?.attach_role_policies[0]?.PolicyArn ??
                 "";
             expect(policyArn).toContain(MOTO_ACCOUNT_ID);
+        });
+
+        it("should resolve all template variable placeholders in synthesized payloads", () => {
+            const serialized = JSON.stringify(synthesisOutput);
+            expect(serialized).not.toMatch(/\$\{[a-z_]+\}/);
+        });
+
+        it("should resolve state_bucket in policy documents", () => {
+            const planPolicy =
+                synthesisOutput.roles[0]?.create_policies[0]?.PolicyDocument ??
+                "";
+            expect(planPolicy).toContain("e2etest-terraform-state");
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: verifying placeholder resolution
+            expect(planPolicy).not.toContain("${state_bucket}");
+        });
+
+        it("should resolve state_key_prefix in policy documents", () => {
+            const planPolicy =
+                synthesisOutput.roles[0]?.create_policies[0]?.PolicyDocument ??
+                "";
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: verifying placeholder resolution
+            expect(planPolicy).not.toContain("${state_key_prefix}");
+            expect(planPolicy).toContain("e2etest/");
+        });
+
+        it("should resolve lock_table in policy documents", () => {
+            const planPolicy =
+                synthesisOutput.roles[0]?.create_policies[0]?.PolicyDocument ??
+                "";
+            expect(planPolicy).toContain("e2etest-terraform-locks");
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: verifying placeholder resolution
+            expect(planPolicy).not.toContain("${lock_table}");
         });
     });
 

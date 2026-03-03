@@ -3,13 +3,12 @@ import { join } from "node:path";
 import { defineCommand } from "citty";
 import { consola } from "consola";
 import type { FormulationConfig } from "../entities/formulation-config.js";
-import { DANGEROUS_KEYS } from "../entities/sanitize-json.js";
 import type { SynthesisOutput } from "../entities/synthesis-output.js";
 import type { ValidationOutput } from "../entities/validation-result.js";
 import type { FormulationOutputInput } from "../use-cases/formulation-output.schema.js";
 import type { FormulationConfigParser } from "../use-cases/parse-formulation-config.js";
 import type { FormulationOutputParser } from "../use-cases/parse-formulation-output.js";
-import type { TemplateVariableResolver } from "../use-cases/resolve-template-variables.js";
+import type { OutputVariableResolver } from "../use-cases/resolve-output-variables.js";
 import { SynthesisOutputSchema } from "../use-cases/synthesis-output.schema.js";
 import type { PayloadSynthesizer } from "../use-cases/synthesize-payloads.js";
 import type { ValidateAndFixOrchestrator } from "../use-cases/validate-and-fix.js";
@@ -24,7 +23,7 @@ export interface SynthesizeCommandDeps {
     readonly parser: FormulationOutputParser;
     readonly configParser: FormulationConfigParser;
     readonly orchestrator: ValidateAndFixOrchestrator;
-    readonly resolver: TemplateVariableResolver;
+    readonly outputResolver: OutputVariableResolver;
     readonly synthesizer: PayloadSynthesizer;
 }
 
@@ -57,93 +56,25 @@ function hasValidationWarnings(validation: ValidationOutput): boolean {
     );
 }
 
-function assertSafeObjectKey(key: string): void {
-    if (DANGEROUS_KEYS.has(key)) {
-        throw new Error(
-            `Resolved template variable produced an unsafe object key: "${key}". ` +
-                "Template variables must not resolve to special property names.",
-        );
-    }
-}
-
-function assertUniqueResolvedKey(
-    keySources: Record<string, string>,
-    resolvedKey: string,
-    originalKey: string,
-): void {
-    if (
-        Object.hasOwn(keySources, resolvedKey) &&
-        keySources[resolvedKey] !== originalKey
-    ) {
-        throw new Error(
-            `Template variable resolution produced duplicate object key "${resolvedKey}" ` +
-                `from source keys "${keySources[resolvedKey]}" and "${originalKey}". ` +
-                "Template variables in object property names must resolve to unique keys.",
-        );
-    }
-}
-
 function resolveTemplateVariables(
     deps: SynthesizeCommandDeps,
     fixedOutput: FormulationOutputInput,
     templateVariables: Readonly<Record<string, string>>,
     config: FormulationConfig,
 ): FormulationOutputInput {
-    const missingVariables = new Set<string>();
+    const resolution = deps.outputResolver.resolve(
+        fixedOutput,
+        templateVariables,
+        config,
+    );
 
-    const resolveString = (value: string): string => {
-        const resolution = deps.resolver.resolve(
-            value,
-            templateVariables,
-            config,
-        );
-
-        if (!resolution.resolved) {
-            for (const variable of resolution.missingVariables) {
-                missingVariables.add(variable);
-            }
-            return value;
-        }
-
-        return resolution.output;
-    };
-
-    const resolveValue = (value: unknown): unknown => {
-        if (typeof value === "string") {
-            return resolveString(value);
-        }
-
-        if (Array.isArray(value)) {
-            return value.map((item) => resolveValue(item));
-        }
-
-        if (value !== null && typeof value === "object") {
-            const result: Record<string, unknown> = Object.create(null);
-            const keySources: Record<string, string> = Object.create(null);
-
-            for (const [key, val] of Object.entries(value)) {
-                const resolvedKey = resolveString(key);
-                assertSafeObjectKey(resolvedKey);
-                assertUniqueResolvedKey(keySources, resolvedKey, key);
-                keySources[resolvedKey] = key;
-                result[resolvedKey] = resolveValue(val);
-            }
-
-            return result;
-        }
-
-        return value;
-    };
-
-    const resolvedOutput = resolveValue(fixedOutput) as FormulationOutputInput;
-
-    if (missingVariables.size > 0) {
+    if (!resolution.resolved) {
         throw new Error(
-            `Missing required template variables: ${Array.from(missingVariables).join(", ")}. Provide values for these variables in your formulation config or in the 'template_variables' of your formulation output.`,
+            `Missing required template variables: ${resolution.missingVariables.join(", ")}. Provide values for these variables in your formulation config or in the 'template_variables' of your formulation output.`,
         );
     }
 
-    const serialized = JSON.stringify(resolvedOutput);
+    const serialized = JSON.stringify(resolution.output);
     return deps.parser.parse(serialized);
 }
 

@@ -1,0 +1,131 @@
+{
+    "metadata": {
+        "iac_tool": "terraform",
+        "iac_version": "1.12.0",
+        "format_version": "1.2"
+    },
+    "toolchain_actions": {
+        "plan_and_apply": [
+            {
+                "action": "sts:GetCallerIdentity",
+                "resource": "*",
+                "purpose": "Provider initialization",
+                "category": "toolchain"
+            },
+            {
+                "action": "s3:GetObject",
+                "resource": "arn:aws:s3:::${state_bucket}/${state_key_prefix}*",
+                "purpose": "Read Terraform state",
+                "category": "toolchain"
+            },
+            {
+                "action": "s3:ListBucket",
+                "resource": "arn:aws:s3:::${state_bucket}",
+                "purpose": "List state files",
+                "category": "toolchain"
+            },
+            {
+                "action": "dynamodb:GetItem",
+                "resource": "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}",
+                "purpose": "Check lock",
+                "category": "toolchain"
+            }
+        ],
+        "apply_only": [
+            {
+                "action": "s3:PutObject",
+                "resource": "arn:aws:s3:::${state_bucket}/${state_key_prefix}*",
+                "purpose": "Write Terraform state",
+                "category": "toolchain"
+            },
+            {
+                "action": "s3:DeleteObject",
+                "resource": "arn:aws:s3:::${state_bucket}/${state_key_prefix}*",
+                "purpose": "Delete old state",
+                "category": "toolchain"
+            },
+            {
+                "action": "dynamodb:PutItem",
+                "resource": "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}",
+                "purpose": "Acquire lock",
+                "category": "toolchain"
+            },
+            {
+                "action": "dynamodb:DeleteItem",
+                "resource": "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}",
+                "purpose": "Release lock",
+                "category": "toolchain"
+            }
+        ]
+    },
+    "infrastructure_actions": {
+        "plan_and_apply": [
+            {
+                "action": "s3:GetBucketLocation",
+                "resource": "arn:aws:s3:::e2etest-*",
+                "purpose": "read for aws_s3_bucket",
+                "category": "read",
+                "source_resource": ["aws_s3_bucket.test"],
+                "plan_action": ["create"]
+            },
+            {
+                "action": "s3:ListBucket",
+                "resource": "arn:aws:s3:::e2etest-*",
+                "purpose": "read for aws_s3_bucket",
+                "category": "read",
+                "source_resource": ["aws_s3_bucket.test"],
+                "plan_action": ["create"]
+            },
+            {
+                "action": "s3:GetBucketPolicy",
+                "resource": "arn:aws:s3:::e2etest-*",
+                "purpose": "read for aws_s3_bucket",
+                "category": "read",
+                "source_resource": ["aws_s3_bucket.test"],
+                "plan_action": ["create"]
+            },
+            {
+                "action": "s3:GetBucketTagging",
+                "resource": "arn:aws:s3:::e2etest-*",
+                "purpose": "read for aws_s3_bucket",
+                "category": "read",
+                "source_resource": ["aws_s3_bucket.test"],
+                "plan_action": ["create"]
+            }
+        ],
+        "apply_only": [
+            {
+                "action": "s3:CreateBucket",
+                "resource": "arn:aws:s3:::e2etest-*",
+                "purpose": "create for aws_s3_bucket",
+                "category": "create",
+                "source_resource": ["aws_s3_bucket.test"],
+                "plan_action": ["create"]
+            },
+            {
+                "action": "s3:PutBucketPolicy",
+                "resource": "arn:aws:s3:::e2etest-*",
+                "purpose": "create for aws_s3_bucket",
+                "category": "create",
+                "source_resource": ["aws_s3_bucket.test"],
+                "plan_action": ["create"]
+            },
+            {
+                "action": "s3:PutBucketTagging",
+                "resource": "arn:aws:s3:::e2etest-*",
+                "purpose": "create for aws_s3_bucket",
+                "category": "create",
+                "source_resource": ["aws_s3_bucket.test"],
+                "plan_action": ["create"]
+            },
+            {
+                "action": "s3:DeleteBucket",
+                "resource": "arn:aws:s3:::e2etest-*",
+                "purpose": "delete for aws_s3_bucket",
+                "category": "delete",
+                "source_resource": ["aws_s3_bucket.test"],
+                "plan_action": ["create"]
+            }
+        ]
+    }
+}

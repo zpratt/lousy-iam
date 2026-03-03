@@ -5,6 +5,7 @@ import type { FormulationOutput } from "../entities/policy-document.js";
 import type { PolicyFormulator } from "../use-cases/formulate-policies.js";
 import type { ActionInventoryParser } from "../use-cases/parse-action-inventory.js";
 import type { FormulationConfigParser } from "../use-cases/parse-formulation-config.js";
+import type { OutputVariableResolver } from "../use-cases/resolve-output-variables.js";
 
 export interface ConsoleOutput {
     log(message: string): void;
@@ -15,6 +16,7 @@ export interface FormulateCommandDeps {
     readonly configParser: FormulationConfigParser;
     readonly inventoryParser: ActionInventoryParser;
     readonly formulator: PolicyFormulator;
+    readonly outputResolver: OutputVariableResolver;
 }
 
 export interface FormulateCommand {
@@ -42,9 +44,22 @@ export function createFormulateCommand(
 
             const result = deps.formulator.formulate(inventory, config);
 
-            output.log(JSON.stringify(result, null, 2));
+            const resolution = deps.outputResolver.resolve(
+                result,
+                result.template_variables,
+                config,
+            );
 
-            return result;
+            if (!resolution.resolved) {
+                output.warn(
+                    `Unresolved template variables: ${resolution.missingVariables.join(", ")}`,
+                );
+                output.log(JSON.stringify(result, null, 2));
+                return result;
+            }
+
+            output.log(JSON.stringify(resolution.output, null, 2));
+            return resolution.output;
         },
     };
 }
