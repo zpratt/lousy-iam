@@ -334,6 +334,72 @@ describe("FormulatePolicies", () => {
             );
         });
 
+        it("should prefer account_id from templateVariables when top-level accountId is null", () => {
+            const mockPermissionBuilder = {
+                buildPlanPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+                buildApplyPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+            };
+            const mockTrustBuilder = {
+                buildPlanTrust: vi.fn().mockReturnValue(buildMockTrustPolicy()),
+                buildApplyTrust: vi
+                    .fn()
+                    .mockReturnValue(buildMockTrustPolicy()),
+            };
+
+            const formulator = createPolicyFormulator({
+                permissionPolicyBuilder: mockPermissionBuilder,
+                trustPolicyBuilder: mockTrustBuilder,
+            });
+
+            const templateAccountId = String(
+                chance.integer({ min: 100000000000, max: 999999999999 }),
+            );
+            const config = buildConfig({
+                accountId: null,
+                templateVariables: { account_id: templateAccountId },
+            });
+            const result = formulator.formulate(buildInventory(), config);
+
+            expect(result.template_variables.account_id).toBe(
+                templateAccountId,
+            );
+        });
+
+        it("should prefer region from templateVariables when top-level region is null", () => {
+            const mockPermissionBuilder = {
+                buildPlanPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+                buildApplyPolicy: vi
+                    .fn()
+                    .mockReturnValue(buildMockPermissionPolicy()),
+            };
+            const mockTrustBuilder = {
+                buildPlanTrust: vi.fn().mockReturnValue(buildMockTrustPolicy()),
+                buildApplyTrust: vi
+                    .fn()
+                    .mockReturnValue(buildMockTrustPolicy()),
+            };
+
+            const formulator = createPolicyFormulator({
+                permissionPolicyBuilder: mockPermissionBuilder,
+                trustPolicyBuilder: mockTrustBuilder,
+            });
+
+            const templateRegion = "eu-west-1";
+            const config = buildConfig({
+                region: null,
+                templateVariables: { region: templateRegion },
+            });
+            const result = formulator.formulate(buildInventory(), config);
+
+            expect(result.template_variables.region).toBe(templateRegion);
+        });
+
         it("should use config values for role metadata", () => {
             const mockPermissionBuilder = {
                 buildPlanPolicy: vi
