@@ -59,7 +59,9 @@ function resolveObject(
     depth: number,
 ): Record<string, unknown> {
     if (depth > MAX_DEPTH) {
-        throw new Error("Template variable resolution nesting too deep");
+        throw new Error(
+            `Template variable resolution exceeded maximum nesting depth of ${MAX_DEPTH} levels`,
+        );
     }
 
     // Object.create(null) prevents prototype pollution via resolved keys

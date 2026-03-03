@@ -208,7 +208,7 @@ describe("OutputVariableResolver", () => {
 
             // Act & Assert
             expect(() => outputResolver.resolve(input, {}, config)).toThrow(
-                "nesting too deep",
+                "exceeded maximum nesting depth",
             );
         });
     });
