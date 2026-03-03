@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { defineCommand } from "citty";
 import { consola } from "consola";
+import type { FormulationConfig } from "../entities/formulation-config.js";
 import type { FormulationOutput } from "../entities/policy-document.js";
+import { DANGEROUS_KEYS } from "../entities/sanitize-json.js";
 import type { PolicyFormulator } from "../use-cases/formulate-policies.js";
 import type { ActionInventoryParser } from "../use-cases/parse-action-inventory.js";
 import type { FormulationConfigParser } from "../use-cases/parse-formulation-config.js";
@@ -27,6 +29,67 @@ export interface FormulateCommand {
     ): Promise<FormulationOutput>;
 }
 
+function assertSafeObjectKey(key: string): void {
+    if (DANGEROUS_KEYS.has(key)) {
+        throw new Error(
+            `Resolved template variable produced an unsafe object key: "${key}". ` +
+                "Template variables must not resolve to special property names.",
+        );
+    }
+}
+
+function resolveFormulationOutput(
+    resolver: TemplateVariableResolver,
+    result: FormulationOutput,
+    config: FormulationConfig,
+):
+    | { resolved: true; output: FormulationOutput }
+    | { resolved: false; missingVariables: string[] } {
+    const missingVariables = new Set<string>();
+
+    const resolveString = (value: string): string => {
+        const resolution = resolver.resolve(
+            value,
+            result.template_variables,
+            config,
+        );
+        if (!resolution.resolved) {
+            for (const variable of resolution.missingVariables) {
+                missingVariables.add(variable);
+            }
+            return value;
+        }
+        return resolution.output;
+    };
+
+    const resolveValue = (value: unknown): unknown => {
+        if (typeof value === "string") {
+            return resolveString(value);
+        }
+        if (Array.isArray(value)) {
+            return value.map((item) => resolveValue(item));
+        }
+        if (value !== null && typeof value === "object") {
+            const obj: Record<string, unknown> = Object.create(null);
+            for (const [key, val] of Object.entries(value)) {
+                const resolvedKey = resolveString(key);
+                assertSafeObjectKey(resolvedKey);
+                obj[resolvedKey] = resolveValue(val);
+            }
+            return obj;
+        }
+        return value;
+    };
+
+    const resolvedOutput = resolveValue(result) as FormulationOutput;
+
+    if (missingVariables.size > 0) {
+        return { resolved: false, missingVariables: [...missingVariables] };
+    }
+
+    return { resolved: true, output: resolvedOutput };
+}
+
 export function createFormulateCommand(
     deps: FormulateCommandDeps,
 ): FormulateCommand {
@@ -44,10 +107,9 @@ export function createFormulateCommand(
 
             const result = deps.formulator.formulate(inventory, config);
 
-            const serialized = JSON.stringify(result);
-            const resolution = deps.resolver.resolve(
-                serialized,
-                result.template_variables,
+            const resolution = resolveFormulationOutput(
+                deps.resolver,
+                result,
                 config,
             );
 
@@ -59,11 +121,8 @@ export function createFormulateCommand(
                 return result;
             }
 
-            const resolvedResult = JSON.parse(
-                resolution.output,
-            ) as FormulationOutput;
-            output.log(JSON.stringify(resolvedResult, null, 2));
-            return resolvedResult;
+            output.log(JSON.stringify(resolution.output, null, 2));
+            return resolution.output;
         },
     };
 }

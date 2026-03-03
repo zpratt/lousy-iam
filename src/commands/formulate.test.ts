@@ -84,6 +84,74 @@ function buildConfigJson(overrides?: Record<string, unknown>) {
     });
 }
 
+function buildInventoryJsonWithPlaceholders() {
+    return JSON.stringify({
+        metadata: {
+            iac_tool: "terraform",
+            iac_version: "1.7.0",
+            format_version: "1.2",
+        },
+        toolchain_actions: {
+            plan_and_apply: [
+                {
+                    action: "sts:GetCallerIdentity",
+                    resource: "*",
+                    purpose: "Provider initialization",
+                    category: "toolchain",
+                },
+                {
+                    action: "s3:GetObject",
+                    resource:
+                        // biome-ignore lint/suspicious/noTemplateCurlyInString: test fixture with IAM ARN placeholder
+                        "arn:aws:s3:::${state_bucket}/${state_key_prefix}*",
+                    purpose: "Read Terraform state",
+                    category: "toolchain",
+                },
+                {
+                    action: "dynamodb:GetItem",
+                    resource:
+                        // biome-ignore lint/suspicious/noTemplateCurlyInString: test fixture with IAM ARN placeholder
+                        "arn:aws:dynamodb:${region}:${account_id}:table/${lock_table}",
+                    purpose: "Check lock",
+                    category: "toolchain",
+                },
+            ],
+            apply_only: [
+                {
+                    action: "s3:PutObject",
+                    resource:
+                        // biome-ignore lint/suspicious/noTemplateCurlyInString: test fixture with IAM ARN placeholder
+                        "arn:aws:s3:::${state_bucket}/${state_key_prefix}*",
+                    purpose: "Write Terraform state",
+                    category: "toolchain",
+                },
+            ],
+        },
+        infrastructure_actions: {
+            plan_and_apply: [
+                {
+                    action: "ecs:DescribeClusters",
+                    resource: "*",
+                    purpose: "read for aws_ecs_cluster",
+                    category: "read",
+                    source_resource: ["aws_ecs_cluster.main"],
+                    plan_action: ["create"],
+                },
+            ],
+            apply_only: [
+                {
+                    action: "ecs:CreateCluster",
+                    resource: "*",
+                    purpose: "create for aws_ecs_cluster",
+                    category: "create",
+                    source_resource: ["aws_ecs_cluster.main"],
+                    plan_action: ["create"],
+                },
+            ],
+        },
+    });
+}
+
 describe("FormulateCommand", () => {
     describe("given valid inventory and config files", () => {
         it("should produce role definitions with plan and apply roles", async () => {
@@ -214,6 +282,88 @@ describe("FormulateCommand", () => {
             await expect(
                 command.execute("bad.json", "config.json", mockConsole),
             ).rejects.toThrow();
+        });
+    });
+
+    describe("given config with all template variables provided", () => {
+        it("should resolve all placeholders in the returned output", async () => {
+            // Arrange
+            const accountId = "123456789012";
+            const region = "us-west-2";
+            const stateBucket = "my-state-bucket";
+            const stateKeyPrefix = "my-org/my-repo";
+            const lockTable = "my-lock-table";
+
+            const inventoryJson = buildInventoryJsonWithPlaceholders();
+            const configJson = buildConfigJson({
+                account_id: accountId,
+                region,
+                template_variables: {
+                    state_bucket: stateBucket,
+                    state_key_prefix: stateKeyPrefix,
+                    lock_table: lockTable,
+                },
+            });
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inventoryJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const mockConsole = { log: vi.fn(), warn: vi.fn() };
+
+            // Act
+            const result = await command.execute(
+                "inventory.json",
+                "config.json",
+                mockConsole,
+            );
+
+            // Assert
+            const serialized = JSON.stringify(result);
+            expect(serialized).not.toContain("${");
+            expect(serialized).toContain(stateBucket);
+            expect(serialized).toContain(stateKeyPrefix);
+            expect(serialized).toContain(lockTable);
+            expect(serialized).toContain(accountId);
+            expect(serialized).toContain(region);
+        });
+    });
+
+    describe("given config without account_id for unresolved placeholders", () => {
+        it("should warn about missing variables and return unresolved output", async () => {
+            // Arrange
+            const inventoryJson = buildInventoryJsonWithPlaceholders();
+            const configJson = buildConfigJson({
+                template_variables: {
+                    state_bucket: "my-bucket",
+                    state_key_prefix: "my-prefix",
+                    lock_table: "my-table",
+                },
+            });
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inventoryJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const warnFn = vi.fn();
+            const mockConsole = { log: vi.fn(), warn: warnFn };
+
+            // Act
+            const result = await command.execute(
+                "inventory.json",
+                "config.json",
+                mockConsole,
+            );
+
+            // Assert
+            expect(warnFn).toHaveBeenCalledWith(
+                expect.stringContaining("account_id"),
+            );
+            const serialized = JSON.stringify(result);
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: verifying unresolved placeholder remains
+            expect(serialized).toContain("${account_id}");
         });
     });
 });
