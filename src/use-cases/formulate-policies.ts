@@ -69,6 +69,7 @@ export function createPolicyFormulator(
                 permission_policies: [applyPermission],
             });
 
+            // User-provided template variables are spread first; validated config values below override any conflicts
             const templateVariables: Record<string, string> = {
                 ...config.templateVariables,
                 account_id: config.accountId ?? "Target AWS account ID",

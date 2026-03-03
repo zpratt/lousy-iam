@@ -70,6 +70,7 @@ function resolveFormulationOutput(
             return value.map((item) => resolveValue(item));
         }
         if (value !== null && typeof value === "object") {
+            // Object.create(null) prevents prototype pollution via resolved keys
             const obj: Record<string, unknown> = Object.create(null);
             for (const [key, val] of Object.entries(value)) {
                 const resolvedKey = resolveString(key);

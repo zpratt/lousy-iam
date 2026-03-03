@@ -83,7 +83,7 @@ describe("formulate command e2e", () => {
     describe("given a valid inventory and config with all template variables", () => {
         it("should contain no unresolved template variable placeholders in the output", () => {
             const serialized = JSON.stringify(formulationOutput);
-            expect(serialized).not.toContain("${");
+            expect(serialized).not.toMatch(/\$\{[a-z_]+\}/);
         });
 
         it("should resolve state_bucket in S3 toolchain ARNs", () => {

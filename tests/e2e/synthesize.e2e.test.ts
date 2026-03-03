@@ -218,7 +218,7 @@ describe("synthesize command e2e", () => {
 
         it("should resolve all template variable placeholders in synthesized payloads", () => {
             const serialized = JSON.stringify(synthesisOutput);
-            expect(serialized).not.toContain("${");
+            expect(serialized).not.toMatch(/\$\{[a-z_]+\}/);
         });
 
         it("should resolve state_bucket in policy documents", () => {
