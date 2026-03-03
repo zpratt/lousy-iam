@@ -439,7 +439,8 @@ describe("FormulateCommand", () => {
                 .mockResolvedValueOnce(configJson);
 
             const command = buildCommand();
-            const mockConsole = { log: vi.fn(), warn: vi.fn() };
+            const warnFn = vi.fn();
+            const mockConsole = { log: vi.fn(), warn: warnFn };
 
             // Act
             const result = await command.execute(
@@ -466,6 +467,77 @@ describe("FormulateCommand", () => {
                     expect(policyResult.stats.errors).toBe(0);
                 }
             }
+            // sts:GetCallerIdentity with resource "*" leaves a non-fixable LP-011 warning;
+            // formulate should surface it even when the output is otherwise valid
+            expect(warnFn).toHaveBeenCalledWith(
+                expect.stringContaining("warning(s)"),
+            );
+        });
+    });
+
+    describe("given inventory where only non-fixable warnings remain after auto-fix", () => {
+        it("should warn about remaining warnings and still return valid output", async () => {
+            // Arrange - sts:GetCallerIdentity with "*" triggers LP-011 (warning, non-fixable)
+            // but no LP-010 errors, so output is valid with warnings only
+            const inventoryJson = JSON.stringify({
+                metadata: {
+                    iac_tool: "terraform",
+                    iac_version: "1.7.0",
+                    format_version: "1.2",
+                },
+                toolchain_actions: {
+                    plan_and_apply: [
+                        {
+                            action: "sts:GetCallerIdentity",
+                            resource: "*",
+                            purpose: "Provider initialization",
+                            category: "toolchain",
+                        },
+                    ],
+                    apply_only: [],
+                },
+                infrastructure_actions: {
+                    plan_and_apply: [],
+                    apply_only: [],
+                },
+            });
+            const configJson = buildConfigJson();
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inventoryJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const warnFn = vi.fn();
+            const mockConsole = { log: vi.fn(), warn: warnFn };
+
+            // Act
+            const result = await command.execute(
+                "inventory.json",
+                "config.json",
+                mockConsole,
+            );
+
+            // Assert - output is valid (no errors) but warnings were surfaced
+            const orchestrator = createValidateAndFixOrchestrator({
+                permissionValidator: createPermissionPolicyValidator(),
+                trustValidator: createTrustPolicyValidator(),
+                fixer: createPolicyFixer(),
+                unscopedActions: new Set(["sts:GetCallerIdentity"]),
+            });
+            const parsedResult = createFormulationOutputParser().parse(
+                JSON.stringify(result),
+            );
+            const validation = orchestrator.execute(parsedResult);
+
+            expect(validation.valid).toBe(true);
+            expect(warnFn).toHaveBeenCalledWith(
+                expect.stringContaining("0 unfixable error(s)"),
+            );
+            expect(warnFn).toHaveBeenCalledWith(
+                expect.stringContaining("warning(s)"),
+            );
+            expect(result.roles).toBeDefined();
         });
     });
 

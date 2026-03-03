@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { defineCommand } from "citty";
 import { consola } from "consola";
+import {
+    countValidationErrors,
+    countValidationWarnings,
+} from "../lib/validation-output.js";
 import type { PolicyFormulator } from "../use-cases/formulate-policies.js";
 import type { FormulationOutputInput } from "../use-cases/formulation-output.schema.js";
 import type { ActionInventoryParser } from "../use-cases/parse-action-inventory.js";
@@ -53,25 +57,10 @@ export function createFormulateCommand(
             const { validation, fixedOutput } =
                 deps.orchestrator.executeWithFixed(parsedResult);
 
-            if (!validation.valid) {
-                const totalErrors = validation.role_results.reduce(
-                    (sum, r) =>
-                        sum +
-                        r.policy_results.reduce(
-                            (pSum, p) => pSum + p.stats.errors,
-                            0,
-                        ),
-                    0,
-                );
-                const totalWarnings = validation.role_results.reduce(
-                    (sum, r) =>
-                        sum +
-                        r.policy_results.reduce(
-                            (pSum, p) => pSum + p.stats.warnings,
-                            0,
-                        ),
-                    0,
-                );
+            const totalErrors = countValidationErrors(validation);
+            const totalWarnings = countValidationWarnings(validation);
+
+            if (totalErrors > 0 || totalWarnings > 0) {
                 output.warn(
                     `Validation found ${totalErrors} unfixable error(s) and ${totalWarnings} warning(s)`,
                 );

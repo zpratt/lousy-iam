@@ -4,7 +4,10 @@ import { defineCommand } from "citty";
 import { consola } from "consola";
 import type { FormulationConfig } from "../entities/formulation-config.js";
 import type { SynthesisOutput } from "../entities/synthesis-output.js";
-import type { ValidationOutput } from "../entities/validation-result.js";
+import {
+    countValidationErrors,
+    hasValidationWarnings,
+} from "../lib/validation-output.js";
 import type { FormulationOutputInput } from "../use-cases/formulation-output.schema.js";
 import type { FormulationConfigParser } from "../use-cases/parse-formulation-config.js";
 import type { FormulationOutputParser } from "../use-cases/parse-formulation-output.js";
@@ -39,21 +42,6 @@ export interface SynthesizeCommand {
         options: SynthesizeCommandOptions,
         console: SynthesizeConsoleOutput,
     ): Promise<SynthesisOutput>;
-}
-
-function countValidationErrors(validation: ValidationOutput): number {
-    return validation.role_results.reduce(
-        (sum, r) =>
-            sum +
-            r.policy_results.reduce((pSum, p) => pSum + p.stats.errors, 0),
-        0,
-    );
-}
-
-function hasValidationWarnings(validation: ValidationOutput): boolean {
-    return validation.role_results.some((r) =>
-        r.policy_results.some((p) => p.stats.warnings > 0),
-    );
 }
 
 function resolveTemplateVariables(
