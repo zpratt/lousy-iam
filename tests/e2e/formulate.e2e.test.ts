@@ -10,6 +10,7 @@ import { createTrustPolicyBuilder } from "../../src/use-cases/build-trust-policy
 import { createPolicyFormulator } from "../../src/use-cases/formulate-policies.js";
 import { createActionInventoryParser } from "../../src/use-cases/parse-action-inventory.js";
 import { createFormulationConfigParser } from "../../src/use-cases/parse-formulation-config.js";
+import { createOutputVariableResolver } from "../../src/use-cases/resolve-output-variables.js";
 import { createTemplateVariableResolver } from "../../src/use-cases/resolve-template-variables.js";
 
 const FIXTURES_DIR = resolve(
@@ -32,7 +33,9 @@ function buildFormulateCommand() {
             permissionPolicyBuilder: createPermissionPolicyBuilder(),
             trustPolicyBuilder: createTrustPolicyBuilder(),
         }),
-        resolver: createTemplateVariableResolver(),
+        outputResolver: createOutputVariableResolver(
+            createTemplateVariableResolver(),
+        ),
     });
 }
 

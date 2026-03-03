@@ -15,6 +15,7 @@ import { createActionInventoryParser } from "./use-cases/parse-action-inventory.
 import { createFormulationConfigParser } from "./use-cases/parse-formulation-config.js";
 import { createFormulationOutputParser } from "./use-cases/parse-formulation-output.js";
 import { createTerraformPlanParser } from "./use-cases/parse-terraform-plan.js";
+import { createOutputVariableResolver } from "./use-cases/resolve-output-variables.js";
 import { createTemplateVariableResolver } from "./use-cases/resolve-template-variables.js";
 import { createActionInventorySerializer } from "./use-cases/serialize-action-inventory.js";
 import { createPayloadSynthesizer } from "./use-cases/synthesize-payloads.js";
@@ -30,6 +31,10 @@ const analyze = createAnalyzeCittyCommand({
     serializer: createActionInventorySerializer(),
 });
 
+const outputResolver = createOutputVariableResolver(
+    createTemplateVariableResolver(),
+);
+
 const formulate = createFormulateCittyCommand({
     configParser: createFormulationConfigParser(),
     inventoryParser: createActionInventoryParser(),
@@ -37,7 +42,7 @@ const formulate = createFormulateCittyCommand({
         permissionPolicyBuilder: createPermissionPolicyBuilder(),
         trustPolicyBuilder: createTrustPolicyBuilder(),
     }),
-    resolver: createTemplateVariableResolver(),
+    outputResolver,
 });
 
 const validate = createValidateCittyCommand({
@@ -59,7 +64,7 @@ const synthesize = createSynthesizeCittyCommand({
         fixer: createPolicyFixer(),
         unscopedActions: UNSCOPED_ACTIONS,
     }),
-    resolver: createTemplateVariableResolver(),
+    outputResolver,
     synthesizer: createPayloadSynthesizer(),
 });
 

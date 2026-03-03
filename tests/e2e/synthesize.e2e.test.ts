@@ -25,6 +25,7 @@ import { UNSCOPED_ACTIONS } from "../../src/lib/unscoped-actions.js";
 import { createPolicyFixer } from "../../src/use-cases/fix-policy.js";
 import { createFormulationConfigParser } from "../../src/use-cases/parse-formulation-config.js";
 import { createFormulationOutputParser } from "../../src/use-cases/parse-formulation-output.js";
+import { createOutputVariableResolver } from "../../src/use-cases/resolve-output-variables.js";
 import { createTemplateVariableResolver } from "../../src/use-cases/resolve-template-variables.js";
 import { createPayloadSynthesizer } from "../../src/use-cases/synthesize-payloads.js";
 import { createValidateAndFixOrchestrator } from "../../src/use-cases/validate-and-fix.js";
@@ -61,7 +62,9 @@ function buildSynthesizeCommand() {
             fixer: createPolicyFixer(),
             unscopedActions: UNSCOPED_ACTIONS,
         }),
-        resolver: createTemplateVariableResolver(),
+        outputResolver: createOutputVariableResolver(
+            createTemplateVariableResolver(),
+        ),
         synthesizer: createPayloadSynthesizer(),
     });
 }

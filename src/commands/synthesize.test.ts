@@ -3,6 +3,7 @@ import Chance from "chance";
 import { describe, expect, it, vi } from "vitest";
 import { createFormulationConfigParser } from "../use-cases/parse-formulation-config.js";
 import { createFormulationOutputParser } from "../use-cases/parse-formulation-output.js";
+import { createOutputVariableResolver } from "../use-cases/resolve-output-variables.js";
 import { createTemplateVariableResolver } from "../use-cases/resolve-template-variables.js";
 import { createPayloadSynthesizer } from "../use-cases/synthesize-payloads.js";
 import { createValidateAndFixOrchestrator } from "../use-cases/validate-and-fix.js";
@@ -150,7 +151,9 @@ function buildCommand() {
             },
             unscopedActions: new Set(["sts:GetCallerIdentity"]),
         }),
-        resolver: createTemplateVariableResolver(),
+        outputResolver: createOutputVariableResolver(
+            createTemplateVariableResolver(),
+        ),
         synthesizer: createPayloadSynthesizer(),
     });
 }
@@ -714,7 +717,9 @@ describe("SynthesizeCommand", () => {
                     },
                     unscopedActions: new Set(),
                 }),
-                resolver: createTemplateVariableResolver(),
+                outputResolver: createOutputVariableResolver(
+                    createTemplateVariableResolver(),
+                ),
                 synthesizer: brokenSynthesizer,
             });
             const mockConsole = buildMockConsole();
@@ -816,7 +821,9 @@ describe("SynthesizeCommand", () => {
                     },
                     unscopedActions: new Set(),
                 }),
-                resolver: createTemplateVariableResolver(),
+                outputResolver: createOutputVariableResolver(
+                    createTemplateVariableResolver(),
+                ),
                 synthesizer: createPayloadSynthesizer(),
             });
             const mockConsole = buildMockConsole();
