@@ -42,6 +42,13 @@ const formulate = createFormulateCittyCommand({
         permissionPolicyBuilder: createPermissionPolicyBuilder(),
         trustPolicyBuilder: createTrustPolicyBuilder(),
     }),
+    parser: createFormulationOutputParser(),
+    orchestrator: createValidateAndFixOrchestrator({
+        permissionValidator: createPermissionPolicyValidator(),
+        trustValidator: createTrustPolicyValidator(),
+        fixer: createPolicyFixer(),
+        unscopedActions: UNSCOPED_ACTIONS,
+    }),
     outputResolver,
 });
 

@@ -2,6 +2,10 @@ import { readFile } from "node:fs/promises";
 import { defineCommand } from "citty";
 import { consola } from "consola";
 import type { ValidationOutput } from "../entities/validation-result.js";
+import {
+    countValidationErrors,
+    countValidationWarnings,
+} from "../lib/validation-output.js";
 import type { FormulationOutputParser } from "../use-cases/parse-formulation-output.js";
 import type { ValidateAndFixOrchestrator } from "../use-cases/validate-and-fix.js";
 
@@ -37,24 +41,8 @@ export function createValidateCommand(
             output.log(JSON.stringify(result, null, 2));
 
             if (!result.valid) {
-                const totalErrors = result.role_results.reduce(
-                    (sum, r) =>
-                        sum +
-                        r.policy_results.reduce(
-                            (pSum, p) => pSum + p.stats.errors,
-                            0,
-                        ),
-                    0,
-                );
-                const totalWarnings = result.role_results.reduce(
-                    (sum, r) =>
-                        sum +
-                        r.policy_results.reduce(
-                            (pSum, p) => pSum + p.stats.warnings,
-                            0,
-                        ),
-                    0,
-                );
+                const totalErrors = countValidationErrors(result);
+                const totalWarnings = countValidationWarnings(result);
                 output.warn(
                     `Validation found ${totalErrors} error(s) and ${totalWarnings} warning(s)`,
                 );

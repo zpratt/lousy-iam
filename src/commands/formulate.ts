@@ -1,11 +1,17 @@
 import { readFile } from "node:fs/promises";
 import { defineCommand } from "citty";
 import { consola } from "consola";
-import type { FormulationOutput } from "../entities/policy-document.js";
+import {
+    countValidationErrors,
+    countValidationWarnings,
+} from "../lib/validation-output.js";
 import type { PolicyFormulator } from "../use-cases/formulate-policies.js";
+import type { FormulationOutputInput } from "../use-cases/formulation-output.schema.js";
 import type { ActionInventoryParser } from "../use-cases/parse-action-inventory.js";
 import type { FormulationConfigParser } from "../use-cases/parse-formulation-config.js";
+import type { FormulationOutputParser } from "../use-cases/parse-formulation-output.js";
 import type { OutputVariableResolver } from "../use-cases/resolve-output-variables.js";
+import type { ValidateAndFixOrchestrator } from "../use-cases/validate-and-fix.js";
 
 export interface ConsoleOutput {
     log(message: string): void;
@@ -16,6 +22,8 @@ export interface FormulateCommandDeps {
     readonly configParser: FormulationConfigParser;
     readonly inventoryParser: ActionInventoryParser;
     readonly formulator: PolicyFormulator;
+    readonly parser: FormulationOutputParser;
+    readonly orchestrator: ValidateAndFixOrchestrator;
     readonly outputResolver: OutputVariableResolver;
 }
 
@@ -24,7 +32,7 @@ export interface FormulateCommand {
         inputPath: string,
         configPath: string,
         console: ConsoleOutput,
-    ): Promise<FormulationOutput>;
+    ): Promise<FormulationOutputInput>;
 }
 
 export function createFormulateCommand(
@@ -35,7 +43,7 @@ export function createFormulateCommand(
             inputPath: string,
             configPath: string,
             output: ConsoleOutput,
-        ): Promise<FormulationOutput> {
+        ): Promise<FormulationOutputInput> {
             const inventoryContent = await readFile(inputPath, "utf-8");
             const configContent = await readFile(configPath, "utf-8");
 
@@ -44,9 +52,23 @@ export function createFormulateCommand(
 
             const result = deps.formulator.formulate(inventory, config);
 
+            // Convert entity type to schema-validated input for the orchestrator
+            const parsedResult = deps.parser.parse(JSON.stringify(result));
+            const { validation, fixedOutput } =
+                deps.orchestrator.executeWithFixed(parsedResult);
+
+            const totalErrors = countValidationErrors(validation);
+            const totalWarnings = countValidationWarnings(validation);
+
+            if (totalErrors > 0 || totalWarnings > 0) {
+                output.warn(
+                    `Validation found ${totalErrors} unfixable error(s) and ${totalWarnings} warning(s)`,
+                );
+            }
+
             const resolution = deps.outputResolver.resolve(
-                result,
-                result.template_variables,
+                fixedOutput,
+                fixedOutput.template_variables,
                 config,
             );
 
@@ -54,8 +76,8 @@ export function createFormulateCommand(
                 output.warn(
                     `Unresolved template variables: ${resolution.missingVariables.join(", ")}`,
                 );
-                output.log(JSON.stringify(result, null, 2));
-                return result;
+                output.log(JSON.stringify(fixedOutput, null, 2));
+                return fixedOutput;
             }
 
             output.log(JSON.stringify(resolution.output, null, 2));
