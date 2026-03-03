@@ -70,7 +70,7 @@ export function createPolicyFormulator(
             });
 
             // User-provided template variables are spread first; validated config values below override any conflicts
-            const templateVariablesFromConfig = config.templateVariables ?? {};
+            const templateVariablesFromConfig = config.templateVariables;
 
             const accountIdTemplateValue =
                 config.accountId ??

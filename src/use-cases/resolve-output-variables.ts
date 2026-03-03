@@ -52,18 +52,28 @@ function assertUniqueResolvedKey(
 
 const MAX_DEPTH = 64;
 
+function assertMaxDepth(depth: number): void {
+    if (depth > MAX_DEPTH) {
+        throw new Error(
+            `Template variable resolution exceeded maximum nesting depth of ${MAX_DEPTH} levels`,
+        );
+    }
+}
+
+function resolveArray(
+    value: unknown[],
+    resolveValue: (value: unknown, depth: number) => unknown,
+    depth: number,
+): unknown[] {
+    return value.map((item) => resolveValue(item, depth + 1));
+}
+
 function resolveObject(
     value: Record<string, unknown>,
     resolveString: (value: string) => string,
     resolveValue: (value: unknown, depth: number) => unknown,
     depth: number,
 ): Record<string, unknown> {
-    if (depth > MAX_DEPTH) {
-        throw new Error(
-            `Template variable resolution exceeded maximum nesting depth of ${MAX_DEPTH} levels`,
-        );
-    }
-
     // Object.create(null) prevents prototype pollution via resolved keys
     const result: Record<string, unknown> = Object.create(null);
     const keySources: Record<string, string> = Object.create(null);
@@ -105,11 +115,12 @@ export function createOutputVariableResolver(
             };
 
             const resolveValue = (value: unknown, depth = 0): unknown => {
+                assertMaxDepth(depth);
                 if (typeof value === "string") {
                     return resolveString(value);
                 }
                 if (Array.isArray(value)) {
-                    return value.map((item) => resolveValue(item, depth));
+                    return resolveArray(value, resolveValue, depth);
                 }
                 if (value !== null && typeof value === "object") {
                     return resolveObject(
