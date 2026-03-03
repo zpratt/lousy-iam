@@ -70,10 +70,22 @@ export function createPolicyFormulator(
             });
 
             // User-provided template variables are spread first; validated config values below override any conflicts
+            const templateVariablesFromConfig = config.templateVariables ?? {};
+
+            const accountIdTemplateValue =
+                config.accountId ??
+                templateVariablesFromConfig.account_id ??
+                "Target AWS account ID";
+
+            const regionTemplateValue =
+                config.region ??
+                templateVariablesFromConfig.region ??
+                "Target region or * for multi-region";
+
             const templateVariables: Record<string, string> = {
-                ...config.templateVariables,
-                account_id: config.accountId ?? "Target AWS account ID",
-                region: config.region ?? "Target region or * for multi-region",
+                ...templateVariablesFromConfig,
+                account_id: accountIdTemplateValue,
+                region: regionTemplateValue,
                 resource_prefix: config.resourcePrefix,
                 org: config.githubOrg,
                 repo: config.githubRepo,
