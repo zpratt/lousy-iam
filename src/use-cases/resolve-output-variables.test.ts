@@ -192,6 +192,27 @@ describe("OutputVariableResolver", () => {
         });
     });
 
+    describe("given input nested deeper than the maximum allowed depth", () => {
+        it("should throw an error about nesting too deep", () => {
+            // Arrange
+            const resolver = buildPassthroughResolver();
+            const config = buildConfig();
+
+            // Build an object nested 65 levels deep (exceeds MAX_DEPTH of 64)
+            let input: Record<string, unknown> = { leaf: "value" };
+            for (let i = 0; i < 65; i++) {
+                input = { nested: input };
+            }
+
+            const outputResolver = createOutputVariableResolver(resolver);
+
+            // Act & Assert
+            expect(() => outputResolver.resolve(input, {}, config)).toThrow(
+                "nesting too deep",
+            );
+        });
+    });
+
     describe("given non-object/non-string primitive values", () => {
         it("should pass through numbers, booleans, and nulls unchanged", () => {
             // Arrange
