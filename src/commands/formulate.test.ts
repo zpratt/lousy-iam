@@ -3,11 +3,16 @@ import Chance from "chance";
 import { describe, expect, it, vi } from "vitest";
 import { createPermissionPolicyBuilder } from "../use-cases/build-permission-policy.js";
 import { createTrustPolicyBuilder } from "../use-cases/build-trust-policy.js";
+import { createPolicyFixer } from "../use-cases/fix-policy.js";
 import { createPolicyFormulator } from "../use-cases/formulate-policies.js";
 import { createActionInventoryParser } from "../use-cases/parse-action-inventory.js";
 import { createFormulationConfigParser } from "../use-cases/parse-formulation-config.js";
+import { createFormulationOutputParser } from "../use-cases/parse-formulation-output.js";
 import { createOutputVariableResolver } from "../use-cases/resolve-output-variables.js";
 import { createTemplateVariableResolver } from "../use-cases/resolve-template-variables.js";
+import { createValidateAndFixOrchestrator } from "../use-cases/validate-and-fix.js";
+import { createPermissionPolicyValidator } from "../use-cases/validate-permission-policy.js";
+import { createTrustPolicyValidator } from "../use-cases/validate-trust-policy.js";
 import { createFormulateCommand } from "./formulate.js";
 
 vi.mock("node:fs/promises");
@@ -21,6 +26,13 @@ function buildCommand() {
         formulator: createPolicyFormulator({
             permissionPolicyBuilder: createPermissionPolicyBuilder(),
             trustPolicyBuilder: createTrustPolicyBuilder(),
+        }),
+        parser: createFormulationOutputParser(),
+        orchestrator: createValidateAndFixOrchestrator({
+            permissionValidator: createPermissionPolicyValidator(),
+            trustValidator: createTrustPolicyValidator(),
+            fixer: createPolicyFixer(),
+            unscopedActions: new Set(["sts:GetCallerIdentity"]),
         }),
         outputResolver: createOutputVariableResolver(
             createTemplateVariableResolver(),
@@ -367,6 +379,93 @@ describe("FormulateCommand", () => {
             const serialized = JSON.stringify(result);
             // biome-ignore lint/suspicious/noTemplateCurlyInString: verifying unresolved placeholder remains
             expect(serialized).toContain("${account_id}");
+        });
+    });
+
+    describe("given formulated output with auto-fixable violations", () => {
+        it("should produce output that passes validation with zero errors", async () => {
+            // Arrange - use specific resource ARNs to avoid unfixable LP-010 violations
+            const inventoryJson = JSON.stringify({
+                metadata: {
+                    iac_tool: "terraform",
+                    iac_version: "1.7.0",
+                    format_version: "1.2",
+                },
+                toolchain_actions: {
+                    plan_and_apply: [
+                        {
+                            action: "sts:GetCallerIdentity",
+                            resource: "*",
+                            purpose: "Provider initialization",
+                            category: "toolchain",
+                        },
+                    ],
+                    apply_only: [
+                        {
+                            action: "s3:PutObject",
+                            resource: "arn:aws:s3:::state-bucket/*",
+                            purpose: "Write Terraform state",
+                            category: "toolchain",
+                        },
+                    ],
+                },
+                infrastructure_actions: {
+                    plan_and_apply: [
+                        {
+                            action: "s3:GetBucketLocation",
+                            resource: "arn:aws:s3:::my-bucket",
+                            purpose: "read for aws_s3_bucket",
+                            category: "read",
+                            source_resource: ["aws_s3_bucket.main"],
+                            plan_action: ["create"],
+                        },
+                    ],
+                    apply_only: [
+                        {
+                            action: "s3:CreateBucket",
+                            resource: "arn:aws:s3:::my-bucket",
+                            purpose: "create for aws_s3_bucket",
+                            category: "create",
+                            source_resource: ["aws_s3_bucket.main"],
+                            plan_action: ["create"],
+                        },
+                    ],
+                },
+            });
+            const configJson = buildConfigJson();
+
+            vi.mocked(readFile)
+                .mockResolvedValueOnce(inventoryJson)
+                .mockResolvedValueOnce(configJson);
+
+            const command = buildCommand();
+            const mockConsole = { log: vi.fn(), warn: vi.fn() };
+
+            // Act
+            const result = await command.execute(
+                "inventory.json",
+                "config.json",
+                mockConsole,
+            );
+
+            // Assert - validate the output passes validation with zero errors
+            const orchestrator = createValidateAndFixOrchestrator({
+                permissionValidator: createPermissionPolicyValidator(),
+                trustValidator: createTrustPolicyValidator(),
+                fixer: createPolicyFixer(),
+                unscopedActions: new Set(["sts:GetCallerIdentity"]),
+            });
+            const parsedResult = createFormulationOutputParser().parse(
+                JSON.stringify(result),
+            );
+            const validation = orchestrator.execute(parsedResult);
+
+            expect(validation.valid).toBe(true);
+            for (const roleResult of validation.role_results) {
+                for (const policyResult of roleResult.policy_results) {
+                    expect(policyResult.stats.errors).toBe(0);
+                }
+            }
         });
     });
 });
