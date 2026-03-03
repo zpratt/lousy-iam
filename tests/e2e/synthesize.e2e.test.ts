@@ -215,6 +215,38 @@ describe("synthesize command e2e", () => {
                 "";
             expect(policyArn).toContain(MOTO_ACCOUNT_ID);
         });
+
+        it("should resolve all template variable placeholders in synthesized payloads", () => {
+            const serialized = JSON.stringify(synthesisOutput);
+            expect(serialized).not.toContain("${");
+        });
+
+        it("should resolve state_bucket in policy documents", () => {
+            const planPolicy =
+                synthesisOutput.roles[0]?.create_policies[0]?.PolicyDocument ??
+                "";
+            expect(planPolicy).toContain("e2etest-terraform-state");
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: verifying placeholder resolution
+            expect(planPolicy).not.toContain("${state_bucket}");
+        });
+
+        it("should resolve state_key_prefix in policy documents", () => {
+            const planPolicy =
+                synthesisOutput.roles[0]?.create_policies[0]?.PolicyDocument ??
+                "";
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: verifying placeholder resolution
+            expect(planPolicy).not.toContain("${state_key_prefix}");
+            expect(planPolicy).toContain("e2etest/");
+        });
+
+        it("should resolve lock_table in policy documents", () => {
+            const planPolicy =
+                synthesisOutput.roles[0]?.create_policies[0]?.PolicyDocument ??
+                "";
+            expect(planPolicy).toContain("e2etest-terraform-locks");
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: verifying placeholder resolution
+            expect(planPolicy).not.toContain("${lock_table}");
+        });
     });
 
     describe("given synthesized payloads applied to moto via AWS SDK v3", () => {

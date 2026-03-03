@@ -75,6 +75,7 @@ export function createPolicyFormulator(
                 resource_prefix: config.resourcePrefix,
                 org: config.githubOrg,
                 repo: config.githubRepo,
+                ...config.templateVariables,
             };
 
             return { roles, template_variables: templateVariables };

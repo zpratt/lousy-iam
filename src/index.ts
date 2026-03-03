@@ -37,6 +37,7 @@ const formulate = createFormulateCittyCommand({
         permissionPolicyBuilder: createPermissionPolicyBuilder(),
         trustPolicyBuilder: createTrustPolicyBuilder(),
     }),
+    resolver: createTemplateVariableResolver(),
 });
 
 const validate = createValidateCittyCommand({

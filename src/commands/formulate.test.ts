@@ -6,6 +6,7 @@ import { createTrustPolicyBuilder } from "../use-cases/build-trust-policy.js";
 import { createPolicyFormulator } from "../use-cases/formulate-policies.js";
 import { createActionInventoryParser } from "../use-cases/parse-action-inventory.js";
 import { createFormulationConfigParser } from "../use-cases/parse-formulation-config.js";
+import { createTemplateVariableResolver } from "../use-cases/resolve-template-variables.js";
 import { createFormulateCommand } from "./formulate.js";
 
 vi.mock("node:fs/promises");
@@ -20,6 +21,7 @@ function buildCommand() {
             permissionPolicyBuilder: createPermissionPolicyBuilder(),
             trustPolicyBuilder: createTrustPolicyBuilder(),
         }),
+        resolver: createTemplateVariableResolver(),
     });
 }
 
