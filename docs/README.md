@@ -49,7 +49,7 @@ flowchart TD
 
 3. **[validate](./validate-command.md)** checks the formulation output against 33 security rules across 6 categories, automatically fixes 10 deterministic violations (missing `Version` field, duplicate actions, missing conditions), and produces structured validation results with rule IDs and fix hints for remaining issues.
 
-4. **[synthesize](./synthesize-command.md)** resolves `${...}` template variables using your configuration, runs validation internally, and transforms the formulation output into AWS SDK v3 payloads (`CreateRoleCommand`, `CreatePolicyCommand`, `AttachRolePolicyCommand`) ready to deploy.
+4. **[synthesize](./synthesize-command.md)** resolves `${...}` template variables using your configuration, runs validation internally, and transforms the formulation output into AWS SDK v3 payloads (`CreateRoleCommandInput`, `CreatePolicyCommandInput`, `AttachRolePolicyCommandInput`) ready to deploy.
 
 ---
 
@@ -69,7 +69,7 @@ flowchart TD
 | **Policy validation** | 33 security rules across 6 categories validate generated policies against least-privilege best practices |
 | **Auto-fix** | 10 deterministic violations are automatically fixed (missing Version field, duplicate actions, missing conditions) without manual intervention |
 | **Concrete values** | Optionally provide `account_id` and `region` in configuration for deployment-ready policies with automatic AWS partition resolution (standard, GovCloud, China) |
-| **SDK payload synthesis** | Transforms validated policies into AWS SDK v3 payloads (`CreateRoleCommand`, `CreatePolicyCommand`, `AttachRolePolicyCommand`) with template variable resolution |
+| **SDK payload synthesis** | Transforms validated policies into AWS SDK v3 payloads (`CreateRoleCommandInput`, `CreatePolicyCommandInput`, `AttachRolePolicyCommandInput`) with template variable resolution |
 
 ### Supported AWS Resource Types
 
