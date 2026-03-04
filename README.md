@@ -43,7 +43,8 @@ npx lousy-iam analyze --input plan.json > action-inventory.json
 echo '{
   "github_org": "my-org",
   "github_repo": "infra-repo",
-  "resource_prefix": "myteam"
+  "resource_prefix": "myteam",
+  "account_id": "123456789012"
 }' > formulation-config.json
 
 # Generate IAM policy documents
@@ -52,7 +53,7 @@ npx lousy-iam formulate --input action-inventory.json --config formulation-confi
 # Validate policies against least-privilege rules
 npx lousy-iam validate --input roles.json > validation-results.json
 
-# Synthesize AWS SDK v3 payloads (requires account_id in config)
+# Synthesize AWS SDK v3 payloads
 npx lousy-iam synthesize --input roles.json --config formulation-config.json > sdk-payloads.json
 ```
 

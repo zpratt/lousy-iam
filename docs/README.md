@@ -94,7 +94,8 @@ cat > formulation-config.json << 'EOF'
 {
   "github_org": "my-org",
   "github_repo": "infra-repo",
-  "resource_prefix": "myteam"
+  "resource_prefix": "myteam",
+  "account_id": "123456789012"
 }
 EOF
 
