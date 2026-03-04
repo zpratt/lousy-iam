@@ -14,6 +14,7 @@ lousy-iam analyzes your Terraform plan output and produces tightly scoped IAM tr
 - **Concrete values** — Optionally provide `account_id` and `region` in configuration for deployment-ready policies (with automatic AWS partition resolution for GovCloud and China regions)
 - **Policy validation** — 33 security rules across 6 categories validate generated policies against least-privilege best practices
 - **Auto-fix** — 10 deterministic violations are automatically fixed without manual intervention
+- **SDK payload synthesis** — Transforms validated policies into AWS SDK v3 payloads (`CreateRoleCommandInput`, `CreatePolicyCommandInput`, `AttachRolePolicyCommandInput`) with template variable resolution
 - **Extensible action mapping** — Built-in database covering 23 AWS resource types, easy to extend
 
 ## Documentation
@@ -24,6 +25,7 @@ lousy-iam analyzes your Terraform plan output and produces tightly scoped IAM tr
 | [Analyze Command](docs/analyze-command.md) | Phase 1: parse a Terraform plan and produce an action inventory |
 | [Formulate Command](docs/formulate-command.md) | Phase 2: transform the action inventory into IAM policy documents |
 | [Validate Command](docs/validate-command.md) | Phase 3: validate policies against least-privilege rules and auto-fix |
+| [Synthesize Command](docs/synthesize-command.md) | Phase 4: transform validated policies into AWS SDK v3 payloads |
 | [Configuration Reference](docs/configuration.md) | All formulation configuration options |
 | [Action Mapping Database](docs/action-mapping-database.md) | How resource-to-IAM-action mapping works and how to extend it |
 
@@ -41,7 +43,8 @@ npx lousy-iam analyze --input plan.json > action-inventory.json
 echo '{
   "github_org": "my-org",
   "github_repo": "infra-repo",
-  "resource_prefix": "myteam"
+  "resource_prefix": "myteam",
+  "account_id": "123456789012"
 }' > formulation-config.json
 
 # Generate IAM policy documents
@@ -49,6 +52,9 @@ npx lousy-iam formulate --input action-inventory.json --config formulation-confi
 
 # Validate policies against least-privilege rules
 npx lousy-iam validate --input roles.json > validation-results.json
+
+# Synthesize AWS SDK v3 payloads
+npx lousy-iam synthesize --input roles.json --config formulation-config.json > sdk-payloads.json
 ```
 
 See [Getting Started](docs/getting-started.md) for a detailed walkthrough.

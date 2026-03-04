@@ -233,4 +233,5 @@ cat validation-results.json | jq '.valid'
 
 - [Getting Started](./getting-started.md) — End-to-end workflow
 - [Formulate Command](./formulate-command.md) — Phase 2 policy generation
+- [Synthesize Command](./synthesize-command.md) — Phase 4 SDK payload synthesis
 - [Configuration Reference](./configuration.md) — Formulation config options
