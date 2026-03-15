@@ -238,7 +238,7 @@ Produce a single JSON object with the following schema. Write it to stdout.
         "mutations_killed": 7,
         "mutations_survived": 3,
         "survival_rate": 0.3,
-        "coverage_grade": "C"
+        "coverage_grade": "D"
     },
     "surviving_mutations": [
         {
