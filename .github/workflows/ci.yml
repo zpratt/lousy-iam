@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Lint with lousy-agents
-        uses: zpratt/lousy-agents@9a356fc0ab33b9c8a5a31289f357ecf4a391e25c  # v5.3.5
+        uses: zpratt/lousy-agents@4de9b35ccd90cc92f894f87e8de3f739162432a6  # v5.3.6
         with:
           github_token: ${{ github.token }}
 
