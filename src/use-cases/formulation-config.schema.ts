@@ -52,7 +52,7 @@ export const FormulationConfigSchema = z.object({
     planApplySeparation: z.boolean().default(true),
     includeDeleteActions: z.boolean().default(true),
     useGithubEnvironments: z.boolean().default(false),
-    githubEnvironmentNames: z.record(z.string()).default({}),
+    githubEnvironmentNames: z.record(z.string(), z.string()).default({}),
     permissionBoundaryArn: z.string().nullable().default(null),
     rolePath: z.string().default("/"),
     maxSessionDuration: z.number().int().min(3600).max(43200).default(3600),
